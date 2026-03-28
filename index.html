@@ -522,11 +522,11 @@ body {
     const bw = CONFIG.RINK_BORDER_WIDTH * s;
     const cr = CONFIG.RINK_CORNER_RADIUS * s;
 
-    // Ice background
+    // Ice background — inset by half border width so stroke doesn't clip
     const ice = new fabric.Rect({
-      left: 0, top: 0,
-      width: CONFIG.RINK_W * s,
-      height: CONFIG.RINK_H * s,
+      left: bw / 2, top: bw / 2,
+      width: CONFIG.RINK_W * s - bw,
+      height: CONFIG.RINK_H * s - bw,
       rx: cr, ry: cr,
       fill: '#f0f4f8',
       stroke: '#212121',
