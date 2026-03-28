@@ -1199,9 +1199,29 @@ body {
     document.getElementById('btn-undo').addEventListener('click', undo);
     document.getElementById('btn-redo').addEventListener('click', redo);
 
-    document.getElementById('btn-reset').addEventListener('click', () => {
-      if (!confirm('Are you sure you want to clear the entire canvas?')) return;
-      resetCanvas();
+    const resetBtn = document.getElementById('btn-reset');
+    let resetPending = false;
+    resetBtn.addEventListener('click', () => {
+      if (!resetPending) {
+        // First click — ask for confirmation by changing button text
+        resetPending = true;
+        resetBtn.textContent = '⚠ Confirm?';
+        resetBtn.classList.add('danger');
+        // Auto-cancel after 3 seconds
+        setTimeout(() => {
+          if (resetPending) {
+            resetPending = false;
+            resetBtn.innerHTML = '&#10060; Reset';
+            resetBtn.classList.remove('danger');
+          }
+        }, 3000);
+      } else {
+        // Second click — confirmed, do reset
+        resetPending = false;
+        resetBtn.innerHTML = '&#10060; Reset';
+        resetBtn.classList.remove('danger');
+        resetCanvas();
+      }
     });
 
     document.getElementById('btn-save-json').addEventListener('click', exportJSON);
