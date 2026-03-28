@@ -57,7 +57,7 @@ body {
 #app {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 12px;
+  padding: 12px 5%;
 }
 
 /* ========== Title & Description ========== */
@@ -350,6 +350,7 @@ body {
     // Border
     RINK_BORDER_WIDTH: 4,
     RINK_CORNER_RADIUS: 18,
+    RINK_PADDING: 3, // canvas padding around the rink so border doesn't clip
 
     // Net size (base unit for other objects)
     NET_WIDTH: 12,
@@ -460,9 +461,10 @@ body {
 
   function setupCanvas() {
     const effectiveWidth = calcCanvasSize();
-    scaleFactor = effectiveWidth / CONFIG.RINK_W;
-    const w = Math.floor(CONFIG.RINK_W * scaleFactor);
-    const h = Math.floor(CONFIG.RINK_H * scaleFactor);
+    const pad = CONFIG.RINK_PADDING * 2;
+    scaleFactor = (effectiveWidth - pad) / CONFIG.RINK_W;
+    const w = Math.floor(CONFIG.RINK_W * scaleFactor + pad);
+    const h = Math.floor(CONFIG.RINK_H * scaleFactor + pad);
 
     canvas = new fabric.Canvas('rink-canvas', {
       width: w,
@@ -484,10 +486,11 @@ body {
 
   function resizeCanvas() {
     const effectiveWidth = calcCanvasSize();
-    scaleFactor = effectiveWidth / CONFIG.RINK_W;
+    const pad = CONFIG.RINK_PADDING * 2;
+    scaleFactor = (effectiveWidth - pad) / CONFIG.RINK_W;
 
-    const w = Math.floor(CONFIG.RINK_W * scaleFactor);
-    const h = Math.floor(CONFIG.RINK_H * scaleFactor);
+    const w = Math.floor(CONFIG.RINK_W * scaleFactor + pad);
+    const h = Math.floor(CONFIG.RINK_H * scaleFactor + pad);
 
     canvas.setWidth(w);
     canvas.setHeight(h);
@@ -519,14 +522,17 @@ body {
     }
 
     const s = scaleFactor;
+    const p = CONFIG.RINK_PADDING; // pixel padding offset
     const bw = CONFIG.RINK_BORDER_WIDTH * s;
     const cr = CONFIG.RINK_CORNER_RADIUS * s;
+    const rinkW = CONFIG.RINK_W * s;
+    const rinkH = CONFIG.RINK_H * s;
 
-    // Ice background — inset by half border width so stroke doesn't clip
+    // Ice background — offset by padding, inset by half border so stroke stays inside
     const ice = new fabric.Rect({
-      left: bw / 2, top: bw / 2,
-      width: CONFIG.RINK_W * s - bw,
-      height: CONFIG.RINK_H * s - bw,
+      left: p + bw / 2, top: p + bw / 2,
+      width: rinkW - bw,
+      height: rinkH - bw,
       rx: cr, ry: cr,
       fill: '#f0f4f8',
       stroke: '#212121',
@@ -537,25 +543,25 @@ body {
 
     // Center red line
     const centerLine = new fabric.Line(
-      [CONFIG.RINK_W/2 * s, bw, CONFIG.RINK_W/2 * s, CONFIG.RINK_H * s - bw],
+      [p + rinkW/2, p + bw, p + rinkW/2, p + rinkH - bw],
       { stroke: '#d32f2f', strokeWidth: 2 * s, selectable: false, evented: false, _isRink: true }
     );
 
     // Blue lines (1/3 and 2/3)
     const blueLeft = new fabric.Line(
-      [CONFIG.RINK_W/3 * s, bw, CONFIG.RINK_W/3 * s, CONFIG.RINK_H * s - bw],
+      [p + rinkW/3, p + bw, p + rinkW/3, p + rinkH - bw],
       { stroke: '#1976d2', strokeWidth: 1.5 * s, selectable: false, evented: false, _isRink: true }
     );
 
     const blueRight = new fabric.Line(
-      [CONFIG.RINK_W * 2/3 * s, bw, CONFIG.RINK_W * 2/3 * s, CONFIG.RINK_H * s - bw],
+      [p + rinkW * 2/3, p + bw, p + rinkW * 2/3, p + rinkH - bw],
       { stroke: '#1976d2', strokeWidth: 1.5 * s, selectable: false, evented: false, _isRink: true }
     );
 
     // Center circle
     const centerCircle = new fabric.Circle({
-      left: CONFIG.RINK_W/2 * s,
-      top: CONFIG.RINK_H/2 * s,
+      left: p + rinkW/2,
+      top: p + rinkH/2,
       radius: 10 * s,
       fill: 'transparent',
       stroke: '#1976d2',
@@ -567,8 +573,8 @@ body {
 
     // Center dot
     const centerDot = new fabric.Circle({
-      left: CONFIG.RINK_W/2 * s,
-      top: CONFIG.RINK_H/2 * s,
+      left: p + rinkW/2,
+      top: p + rinkH/2,
       radius: 1.5 * s,
       fill: '#1976d2',
       originX: 'center', originY: 'center',
@@ -741,11 +747,12 @@ body {
       linePreviewLine = null;
       document.getElementById('line-hint').style.display = 'none';
 
-      // Store logical coordinates
+      // Store logical coordinates (subtract padding before converting)
       const s = scaleFactor;
+      const p = CONFIG.RINK_PADDING;
       createLine(activeTool,
-        { x: start.x / s, y: start.y / s },
-        { x: end.x / s, y: end.y / s },
+        { x: (start.x - p) / s, y: (start.y - p) / s },
+        { x: (end.x - p) / s, y: (end.y - p) / s },
         getCurrentColour());
       lineStartPoint = null;
 
@@ -767,8 +774,9 @@ body {
   function createLine(type, logStart, logEnd, colour) {
     const s = scaleFactor;
     const sw = 1 * s;
-    const start = { x: logStart.x * s, y: logStart.y * s };
-    const end = { x: logEnd.x * s, y: logEnd.y * s };
+    const p = CONFIG.RINK_PADDING;
+    const start = { x: logStart.x * s + p, y: logStart.y * s + p };
+    const end = { x: logEnd.x * s + p, y: logEnd.y * s + p };
     const objects = [];
 
     // Shorten line so it ends at the arrow base, not the tip
@@ -869,7 +877,8 @@ body {
     const colour = getCurrentColour();
     const s = scaleFactor;
     // Convert to logical coords
-    const logPos = { x: pointer.x / s, y: pointer.y / s };
+    const p = CONFIG.RINK_PADDING;
+    const logPos = { x: (pointer.x - p) / s, y: (pointer.y - p) / s };
     let obj;
 
     switch (activeTool) {
@@ -907,7 +916,8 @@ body {
   // logPos is in LOGICAL coordinates (0-200 x 0-85)
   function placeObject(type, logPos, colour, index) {
     const s = scaleFactor;
-    const pixPos = { x: logPos.x * s, y: logPos.y * s };
+    const p = CONFIG.RINK_PADDING;
+    const pixPos = { x: logPos.x * s + p, y: logPos.y * s + p };
     let obj;
 
     switch (type) {
