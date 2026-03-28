@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hockey Drill Maker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* ========== CSS Variables & Theming ========== */
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-hover: #f0f0f0;
+  --text: #212121;
+  --text-secondary: #666666;
+  --border: #e0e0e0;
+  --primary: #1976d2;
+  --primary-hover: #1565c0;
+  --danger: #d32f2f;
+  --toolbar-bg: #ffffff;
+  --input-bg: #f5f5f5;
+  --shadow: 0 2px 4px rgba(0,0,0,0.1);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.15);
+  --radius: 8px;
+  --radius-sm: 4px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121212;
+    --surface: #1e1e1e;
+    --surface-hover: #2c2c2c;
+    --text: #e0e0e0;
+    --text-secondary: #999999;
+    --border: #333333;
+    --toolbar-bg: #1e1e1e;
+    --input-bg: #2c2c2c;
+    --shadow: 0 2px 4px rgba(0,0,0,0.3);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.4);
+  }
+}
+
+/* ========== Reset & Base ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ========== App Layout ========== */
+#app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+/* ========== Title & Description ========== */
+.drill-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.drill-header input,
+.drill-header textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.drill-header input:focus,
+.drill-header textarea:focus {
+  border-color: var(--primary);
+}
+
+.drill-header input#drill-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.drill-header textarea {
+  resize: vertical;
+  min-height: 40px;
+  max-height: 120px;
+}
+
+/* ========== Toolbar ========== */
+.toolbar {
+  background: var(--toolbar-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+
+.toolbar-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.toolbar-section:last-child {
+  margin-bottom: 0;
+}
+
+.toolbar-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+/* ========== Buttons ========== */
+.tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.tool-btn:hover {
+  background: var(--surface-hover);
+}
+
+.tool-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.tool-btn.danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.tool-btn.danger:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.action-btn:hover { background: var(--surface-hover); }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ========== Colour Picker ========== */
+.colour-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.colour-swatch:hover { transform: scale(1.15); }
+.colour-swatch.active { border-color: var(--text); transform: scale(1.2); }
+
+/* ========== Canvas Container ========== */
+.canvas-container-wrapper {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas-container-wrapper canvas {
+  display: block;
+}
+
+/* ========== Status Bar ========== */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+/* ========== Line Preview Indicator ========== */
+.line-preview-hint {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  pointer-events: none;
+  z-index: 10;
+  display: none;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 600px) {
+  #app { padding: 8px; }
+  .tool-btn { padding: 5px 8px; font-size: 11px; }
+  .colour-swatch { width: 22px; height: 22px; }
+  .drill-header input#drill-title { font-size: 16px; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Drill Title & Description -->
+  <div class="drill-header">
+    <input type="text" id="drill-title" placeholder="Drill Title" />
+    <textarea id="drill-description" placeholder="Drill description..." rows="1"></textarea>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <!-- Lines -->
+    <div class="toolbar-section">
+      <span class="toolbar-label">Lines</span>
+      <button class="tool-btn" data-tool="skate" title="Skating line (solid + arrow)">&#8594; Skate</button>
+      <button class="tool-btn" data-tool="puck" title="Skating with puck (squiggly + arrow)">&#12336; Puck</button>
+      <button class="tool-btn" data-tool="pass" title="Passing line (dashed + arrow)">&#8674; Pass</button>
+      <button class="tool-btn" data-tool="shoot" title="Shooting line (long dash + arrow)">&#10148; Shoot</button>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- Players -->
+      <span class="toolbar-label">Players</span>
+      <button class="tool-btn" data-tool="forward" title="Forward">F</button>
+      <button class="tool-btn" data-tool="defense" title="Defenseman">D</button>
+      <button class="tool-btn" data-tool="goalie" title="Goalie">G</button>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- Equipment -->
+      <span class="toolbar-label">Equip</span>
+      <button class="tool-btn" data-tool="net" title="Hockey net">&#9632; Net</button>
+      <button class="tool-btn" data-tool="pylon" title="Pylon/cone">&#9650; Pylon</button>
+      <button class="tool-btn" data-tool="puck1" title="Single puck">&#9679; Puck</button>
+      <button class="tool-btn" data-tool="puck5" title="5 pucks">&#9679;&#215;5</button>
+    </div>
+
+    <!-- Colours + Actions -->
+    <div class="toolbar-section">
+      <span class="toolbar-label">Colour</span>
+      <div class="colour-swatch" data-colour="#d32f2f" style="background:#d32f2f" title="Red"></div>
+      <div class="colour-swatch" data-colour="#1976d2" style="background:#1976d2" title="Blue"></div>
+      <div class="colour-swatch" data-colour="#388e3c" style="background:#388e3c" title="Green"></div>
+      <div class="colour-swatch" data-colour="#fbc02d" style="background:#fbc02d" title="Yellow"></div>
+      <div class="colour-swatch" data-colour="#f57c00" style="background:#f57c00" title="Orange"></div>
+      <div class="colour-swatch" data-colour="#212121" style="background:#212121" title="Black"></div>
+      <div class="colour-swatch" data-colour="#7b1fa2" style="background:#7b1fa2" title="Purple"></div>
+      <div class="colour-swatch" data-colour="#00897b" style="background:#00897b" title="Teal"></div>
+
+      <div class="toolbar-divider"></div>
+
+      <button class="action-btn" id="btn-undo" title="Undo (Ctrl+Z)" disabled>&#8630; Undo</button>
+      <button class="action-btn" id="btn-redo" title="Redo (Ctrl+Y)" disabled>&#8631; Redo</button>
+
+      <div class="toolbar-divider"></div>
+
+      <button class="action-btn" id="btn-reset" title="Clear canvas">&#10060; Reset</button>
+      <button class="action-btn" id="btn-save-json" title="Save as JSON">&#128190; Save</button>
+      <button class="action-btn" id="btn-load-json" title="Load JSON">&#128194; Load</button>
+      <button class="action-btn" id="btn-export-pdf" title="Export PDF">&#128196; PDF</button>
+      <button class="action-btn" id="btn-upload-bg" title="Upload rink background">&#128247; BG</button>
+      <input type="file" id="file-bg" accept="image/*" style="display:none" />
+      <input type="file" id="file-json" accept=".json,application/json" style="display:none" />
+    </div>
+  </div>
+
+  <!-- Canvas -->
+  <div class="canvas-container-wrapper" id="canvas-wrapper">
+    <div class="line-preview-hint" id="line-hint">Click on rink to set end point</div>
+    <canvas id="rink-canvas"></canvas>
+  </div>
+
+  <div class="status-bar">
+    <span id="status-tool">No tool selected</span>
+    <span id="status-hint">ESC to deselect | Double-click to delete</span>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ==================== CONFIGURATION ====================
+  const CONFIG = {
+    // Rink ratio
+    RINK_W: 200,
+    RINK_H: 85,
+
+    // Border
+    RINK_BORDER_WIDTH: 4,
+    RINK_CORNER_RADIUS: 18,
+
+    // Net size (base unit for other objects)
+    NET_WIDTH: 12,
+    NET_HEIGHT: 8,
+
+    // Derived sizes
+    get PLAYER_RADIUS() { return (this.NET_HEIGHT * 2/3) / 2; },
+    get PYLON_SIZE() { return this.NET_HEIGHT * 2/3; },
+    get PUCK_RADIUS() { return (this.NET_HEIGHT * 1/3) / 2; },
+
+    // Default colours per tool
+    DEFAULT_COLOURS: {
+      skate: '#212121',
+      puck: '#212121',
+      pass: '#212121',
+      shoot: '#212121',
+      forward: '#d32f2f',
+      defense: '#d32f2f',
+      goalie: '#d32f2f',
+      net: '#d32f2f',
+      pylon: '#f57c00',
+      puck1: '#212121',
+      puck5: '#212121'
+    },
+
+    // Undo/redo
+    MAX_HISTORY: 50,
+
+    // Background image URL (set to null for programmatic rink)
+    BACKGROUND_URL: null,
+
+    // PDF watermark/footer
+    PDF_WATERMARK: 'Hockey Drill Maker',
+
+    // LocalStorage key
+    STORAGE_KEY: 'hockey-drill-maker-state',
+
+    // Line types
+    LINE_TOOLS: ['skate', 'puck', 'pass', 'shoot'],
+    OBJECT_TOOLS: ['forward', 'defense', 'goalie', 'net', 'pylon', 'puck1', 'puck5'],
+
+    // Arrow size
+    ARROW_SIZE: 4,
+
+    // Squiggly wave params
+    WAVE_AMP: 1.5,
+    WAVE_FREQ: 0.8
+  };
+
+  // ==================== STATE ====================
+  let canvas;
+  let scaleFactor = 1;
+  let activeTool = null;
+  let activeColour = null; // null = use tool default
+  let lineStartPoint = null;
+  let linePreviewLine = null;
+
+  // Player index helper — finds next available index by scanning canvas
+  function getNextPlayerIndex(letter) {
+    const used = new Set();
+    canvas.getObjects().forEach(obj => {
+      if (obj._drillType === 'player' && obj._playerType === letter) {
+        used.add(obj._playerIndex);
+      }
+    });
+    let i = 1;
+    while (used.has(i)) i++;
+    return i;
+  }
+
+  // Undo/redo
+  let history = [];
+  let historyIndex = -1;
+  let suppressHistory = false;
+
+  // Long-press tracking
+  let longPressTimer = null;
+  let longPressTarget = null;
+  const LONG_PRESS_MS = 600;
+
+  // ==================== INIT ====================
+  function init() {
+    setupCanvas();
+    drawDefaultRink();
+    setupToolbar();
+    setupColourPicker();
+    setupActions();
+    setupKeyboard();
+    setupCanvasInteractions();
+    restoreFromStorage();
+    saveHistoryState();
+  }
+
+  // ==================== CANVAS SETUP ====================
+  function setupCanvas() {
+    const wrapper = document.getElementById('canvas-wrapper');
+    const availableWidth = wrapper.clientWidth;
+    scaleFactor = availableWidth / CONFIG.RINK_W;
+    const w = Math.floor(CONFIG.RINK_W * scaleFactor);
+    const h = Math.floor(CONFIG.RINK_H * scaleFactor);
+
+    canvas = new fabric.Canvas('rink-canvas', {
+      width: w,
+      height: h,
+      selection: false,
+      renderOnAddRemove: true
+    });
+
+    // Expose for testing
+    window.__drillCanvas = canvas;
+
+    // Resize handler
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(resizeCanvas, 150);
+    });
+  }
+
+  function resizeCanvas() {
+    const wrapper = document.getElementById('canvas-wrapper');
+    const availableWidth = wrapper.clientWidth;
+    scaleFactor = availableWidth / CONFIG.RINK_W;
+
+    const w = Math.floor(CONFIG.RINK_W * scaleFactor);
+    const h = Math.floor(CONFIG.RINK_H * scaleFactor);
+
+    canvas.setWidth(w);
+    canvas.setHeight(h);
+
+    // Re-render from semantic data — objects scale to new size automatically
+    const items = serializeDrill();
+    suppressHistory = true;
+    renderDrill(items);
+    suppressHistory = false;
+  }
+
+  // ==================== RINK DRAWING ====================
+  function drawDefaultRink() {
+    if (CONFIG.BACKGROUND_URL) {
+      fabric.Image.fromURL(CONFIG.BACKGROUND_URL, function(img) {
+        img.set({
+          left: 0, top: 0,
+          scaleX: (CONFIG.RINK_W * scaleFactor) / img.width,
+          scaleY: (CONFIG.RINK_H * scaleFactor) / img.height,
+          selectable: false, evented: false,
+          excludeFromExport: false,
+          _isRinkBg: true
+        });
+        canvas.add(img);
+        canvas.sendToBack(img);
+        canvas.renderAll();
+      });
+      return;
+    }
+
+    const s = scaleFactor;
+    const bw = CONFIG.RINK_BORDER_WIDTH * s;
+    const cr = CONFIG.RINK_CORNER_RADIUS * s;
+
+    // Ice background
+    const ice = new fabric.Rect({
+      left: 0, top: 0,
+      width: CONFIG.RINK_W * s,
+      height: CONFIG.RINK_H * s,
+      rx: cr, ry: cr,
+      fill: '#f0f4f8',
+      stroke: '#212121',
+      strokeWidth: bw,
+      selectable: false, evented: false,
+      _isRink: true
+    });
+
+    // Center red line
+    const centerLine = new fabric.Line(
+      [CONFIG.RINK_W/2 * s, bw, CONFIG.RINK_W/2 * s, CONFIG.RINK_H * s - bw],
+      { stroke: '#d32f2f', strokeWidth: 2 * s, selectable: false, evented: false, _isRink: true }
+    );
+
+    // Blue lines (1/3 and 2/3)
+    const blueLeft = new fabric.Line(
+      [CONFIG.RINK_W/3 * s, bw, CONFIG.RINK_W/3 * s, CONFIG.RINK_H * s - bw],
+      { stroke: '#1976d2', strokeWidth: 1.5 * s, selectable: false, evented: false, _isRink: true }
+    );
+
+    const blueRight = new fabric.Line(
+      [CONFIG.RINK_W * 2/3 * s, bw, CONFIG.RINK_W * 2/3 * s, CONFIG.RINK_H * s - bw],
+      { stroke: '#1976d2', strokeWidth: 1.5 * s, selectable: false, evented: false, _isRink: true }
+    );
+
+    // Center circle
+    const centerCircle = new fabric.Circle({
+      left: CONFIG.RINK_W/2 * s,
+      top: CONFIG.RINK_H/2 * s,
+      radius: 10 * s,
+      fill: 'transparent',
+      stroke: '#1976d2',
+      strokeWidth: 1 * s,
+      originX: 'center', originY: 'center',
+      selectable: false, evented: false,
+      _isRink: true
+    });
+
+    // Center dot
+    const centerDot = new fabric.Circle({
+      left: CONFIG.RINK_W/2 * s,
+      top: CONFIG.RINK_H/2 * s,
+      radius: 1.5 * s,
+      fill: '#1976d2',
+      originX: 'center', originY: 'center',
+      selectable: false, evented: false,
+      _isRink: true
+    });
+
+    canvas.add(ice, centerLine, blueLeft, blueRight, centerCircle, centerDot);
+    canvas.renderAll();
+  }
+
+  // ==================== TOOLBAR ====================
+  function setupToolbar() {
+    document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tool = btn.dataset.tool;
+        if (activeTool === tool) {
+          deselectTool();
+        } else {
+          selectTool(tool);
+        }
+      });
+    });
+  }
+
+  function selectTool(tool) {
+    cancelLineDrawing();
+    activeTool = tool;
+
+    // Reset colour to tool default
+    activeColour = null;
+
+    // Update button states
+    document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector(`.tool-btn[data-tool="${tool}"]`);
+    if (btn) btn.classList.add('active');
+
+    // Highlight default colour swatch
+    const defaultCol = CONFIG.DEFAULT_COLOURS[tool];
+    updateColourSwatchHighlight(defaultCol);
+
+    updateStatus();
+  }
+
+  function deselectTool() {
+    cancelLineDrawing();
+    activeTool = null;
+    activeColour = null;
+    document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.colour-swatch').forEach(s => s.classList.remove('active'));
+    updateStatus();
+  }
+
+  function getCurrentColour() {
+    if (activeColour) return activeColour;
+    if (activeTool) return CONFIG.DEFAULT_COLOURS[activeTool] || '#212121';
+    return '#212121';
+  }
+
+  // ==================== COLOUR PICKER ====================
+  function setupColourPicker() {
+    document.querySelectorAll('.colour-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        activeColour = swatch.dataset.colour;
+        document.querySelectorAll('.colour-swatch').forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+      });
+    });
+  }
+
+  function updateColourSwatchHighlight(colour) {
+    document.querySelectorAll('.colour-swatch').forEach(s => {
+      s.classList.toggle('active', s.dataset.colour === colour);
+    });
+  }
+
+  // ==================== CANVAS INTERACTIONS ====================
+  function setupCanvasInteractions() {
+    canvas.on('mouse:down', onCanvasMouseDown);
+    canvas.on('mouse:move', onCanvasMouseMove);
+
+    // Double-click to delete (desktop)
+    canvas.on('mouse:dblclick', onCanvasDblClick);
+
+    // Long-press to delete (touch)
+    canvas.on('mouse:down', onLongPressStart);
+    canvas.on('mouse:up', onLongPressEnd);
+    canvas.on('mouse:move', onLongPressCancel);
+  }
+
+  function onCanvasMouseDown(opt) {
+    if (!activeTool) return;
+    const pointer = canvas.getPointer(opt.e);
+
+    if (CONFIG.LINE_TOOLS.includes(activeTool)) {
+      handleLineClick(pointer);
+    } else if (CONFIG.OBJECT_TOOLS.includes(activeTool)) {
+      handleObjectClick(pointer);
+    }
+  }
+
+  function onCanvasMouseMove(opt) {
+    if (!lineStartPoint || !linePreviewLine) return;
+    const pointer = canvas.getPointer(opt.e);
+    linePreviewLine.set({ x2: pointer.x, y2: pointer.y });
+    canvas.renderAll();
+  }
+
+  function onCanvasDblClick(opt) {
+    const target = opt.target;
+    if (target && !target._isRink && !target._isRinkBg) {
+      deleteObject(target);
+    }
+  }
+
+  // Long-press
+  function onLongPressStart(opt) {
+    if (opt.target && !opt.target._isRink && !opt.target._isRinkBg) {
+      longPressTarget = opt.target;
+      longPressTimer = setTimeout(() => {
+        if (longPressTarget) {
+          deleteObject(longPressTarget);
+          longPressTarget = null;
+        }
+      }, LONG_PRESS_MS);
+    }
+  }
+
+  function onLongPressEnd() {
+    clearTimeout(longPressTimer);
+    longPressTarget = null;
+  }
+
+  function onLongPressCancel() {
+    clearTimeout(longPressTimer);
+    longPressTarget = null;
+  }
+
+  function deleteObject(obj) {
+    if (obj._isRink || obj._isRinkBg) return;
+
+    // If it's a group member, find the group
+    if (obj.group) {
+      canvas.remove(obj.group);
+    } else {
+      canvas.remove(obj);
+    }
+    canvas.renderAll();
+    saveHistoryState();
+    autoSave();
+  }
+
+  // ==================== LINE DRAWING ====================
+  function handleLineClick(pointer) {
+    if (!lineStartPoint) {
+      lineStartPoint = { x: pointer.x, y: pointer.y };
+
+      linePreviewLine = new fabric.Line(
+        [pointer.x, pointer.y, pointer.x, pointer.y],
+        { stroke: '#999', strokeWidth: 1, strokeDashArray: [4, 4], selectable: false, evented: false, _isPreview: true }
+      );
+      canvas.add(linePreviewLine);
+
+      document.getElementById('line-hint').style.display = 'block';
+    } else {
+      const start = lineStartPoint;
+      const end = { x: pointer.x, y: pointer.y };
+
+      canvas.remove(linePreviewLine);
+      linePreviewLine = null;
+      document.getElementById('line-hint').style.display = 'none';
+
+      // Store logical coordinates
+      const s = scaleFactor;
+      createLine(activeTool,
+        { x: start.x / s, y: start.y / s },
+        { x: end.x / s, y: end.y / s },
+        getCurrentColour());
+      lineStartPoint = null;
+
+      saveHistoryState();
+      autoSave();
+    }
+  }
+
+  function cancelLineDrawing() {
+    if (linePreviewLine) {
+      canvas.remove(linePreviewLine);
+      linePreviewLine = null;
+    }
+    lineStartPoint = null;
+    document.getElementById('line-hint').style.display = 'none';
+  }
+
+  // start/end are in LOGICAL coordinates (0-200 x 0-85)
+  function createLine(type, logStart, logEnd, colour) {
+    const s = scaleFactor;
+    const sw = 1 * s;
+    const start = { x: logStart.x * s, y: logStart.y * s };
+    const end = { x: logEnd.x * s, y: logEnd.y * s };
+    const objects = [];
+
+    // Shorten line so it ends at the arrow base, not the tip
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const arrowLen = CONFIG.ARROW_SIZE * s;
+    const shortenEnd = len > arrowLen ? {
+      x: end.x - (dx / len) * arrowLen,
+      y: end.y - (dy / len) * arrowLen
+    } : end;
+
+    if (type === 'skate') {
+      objects.push(new fabric.Line(
+        [start.x, start.y, shortenEnd.x, shortenEnd.y],
+        { stroke: colour, strokeWidth: sw, selectable: false, evented: false }
+      ));
+    } else if (type === 'puck') {
+      const path = createSquigglyPath(start, shortenEnd, s);
+      objects.push(new fabric.Path(path, {
+        stroke: colour, strokeWidth: sw, fill: 'transparent',
+        selectable: false, evented: false
+      }));
+    } else if (type === 'pass') {
+      objects.push(new fabric.Line(
+        [start.x, start.y, shortenEnd.x, shortenEnd.y],
+        { stroke: colour, strokeWidth: sw, strokeDashArray: [3*s, 3*s], selectable: false, evented: false }
+      ));
+    } else if (type === 'shoot') {
+      objects.push(new fabric.Line(
+        [start.x, start.y, shortenEnd.x, shortenEnd.y],
+        { stroke: colour, strokeWidth: sw, strokeDashArray: [6*s, 3*s], selectable: false, evented: false }
+      ));
+    }
+
+    const arrow = createArrowhead(start, end, colour, s);
+    objects.push(arrow);
+
+    const group = new fabric.Group(objects, {
+      selectable: false, evented: true,
+      _drillType: 'line', _lineType: type,
+      _logStartX: logStart.x, _logStartY: logStart.y,
+      _logEndX: logEnd.x, _logEndY: logEnd.y,
+      _colour: colour
+    });
+
+    canvas.add(group);
+    canvas.renderAll();
+  }
+
+  function createSquigglyPath(start, end, s) {
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    if (len < 1) return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+
+    const amp = CONFIG.WAVE_AMP * s;
+    const freq = CONFIG.WAVE_FREQ;
+    const segments = Math.max(Math.floor(len / (3 * s)), 4);
+    const nx = -dy / len;
+    const ny = dx / len;
+
+    let path = `M ${start.x} ${start.y}`;
+    for (let i = 1; i <= segments; i++) {
+      const t = i / segments;
+      const baseX = start.x + dx * t;
+      const baseY = start.y + dy * t;
+      const wave = Math.sin(t * segments * freq * Math.PI) * amp;
+      const px = baseX + nx * wave;
+      const py = baseY + ny * wave;
+      path += ` L ${px.toFixed(1)} ${py.toFixed(1)}`;
+    }
+    return path;
+  }
+
+  function createArrowhead(start, end, colour, s) {
+    const angle = Math.atan2(end.y - start.y, end.x - start.x);
+    const size = CONFIG.ARROW_SIZE * s;
+
+    const tip = end;
+    const p1 = {
+      x: tip.x - size * Math.cos(angle - Math.PI/6),
+      y: tip.y - size * Math.sin(angle - Math.PI/6)
+    };
+    const p2 = {
+      x: tip.x - size * Math.cos(angle + Math.PI/6),
+      y: tip.y - size * Math.sin(angle + Math.PI/6)
+    };
+
+    return new fabric.Polygon(
+      [tip, p1, p2],
+      { fill: colour, stroke: colour, strokeWidth: 0.5 * s, selectable: false, evented: false }
+    );
+  }
+
+  // ==================== OBJECT PLACEMENT ====================
+  function handleObjectClick(pointer) {
+    const colour = getCurrentColour();
+    const s = scaleFactor;
+    // Convert to logical coords
+    const logPos = { x: pointer.x / s, y: pointer.y / s };
+    let obj;
+
+    switch (activeTool) {
+      case 'forward':
+        obj = placeObject('forward', logPos, colour, getNextPlayerIndex('F'));
+        break;
+      case 'defense':
+        obj = placeObject('defense', logPos, colour, getNextPlayerIndex('D'));
+        break;
+      case 'goalie':
+        obj = placeObject('goalie', logPos, colour, getNextPlayerIndex('G'));
+        break;
+      case 'net':
+        obj = placeObject('net', logPos, colour);
+        break;
+      case 'pylon':
+        obj = placeObject('pylon', logPos, colour);
+        break;
+      case 'puck1':
+        obj = placeObject('puck1', logPos, colour);
+        break;
+      case 'puck5':
+        obj = placeObject('puck5', logPos, colour);
+        break;
+    }
+
+    if (obj) {
+      canvas.add(obj);
+      canvas.renderAll();
+      saveHistoryState();
+      autoSave();
+    }
+  }
+
+  // logPos is in LOGICAL coordinates (0-200 x 0-85)
+  function placeObject(type, logPos, colour, index) {
+    const s = scaleFactor;
+    const pixPos = { x: logPos.x * s, y: logPos.y * s };
+    let obj;
+
+    switch (type) {
+      case 'forward':
+        obj = createPlayer('F', index, colour, pixPos, s);
+        break;
+      case 'defense':
+        obj = createPlayer('D', index, colour, pixPos, s);
+        break;
+      case 'goalie':
+        obj = createPlayer('G', index, colour, pixPos, s);
+        break;
+      case 'net':
+        obj = createNet(colour, pixPos, s);
+        break;
+      case 'pylon':
+        obj = createPylon(colour, pixPos, s);
+        break;
+      case 'puck1':
+        obj = createSinglePuck(colour, pixPos, s);
+        break;
+      case 'puck5':
+        obj = createMultiPuck(colour, pixPos, s);
+        break;
+    }
+
+    if (obj) {
+      obj._logX = logPos.x;
+      obj._logY = logPos.y;
+      obj._colour = colour;
+      obj._objectType = type;
+      if (index !== undefined) obj._playerIndex = index;
+    }
+    return obj;
+  }
+
+  function createPlayer(letter, index, colour, pos, s) {
+    const r = CONFIG.PLAYER_RADIUS * s;
+    const swMap = { G: 1, D: 0.8, F: 0.6 };
+    const circle = new fabric.Circle({
+      radius: r,
+      fill: 'transparent',
+      stroke: colour,
+      strokeWidth: (swMap[letter] || 1) * s,
+      originX: 'center', originY: 'center'
+    });
+
+    const label = new fabric.Text(`${letter}${index}`, {
+      fontSize: r * 1.1,
+      fontWeight: 'bold',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fill: colour,
+      originX: 'center', originY: 'center'
+    });
+
+    const group = new fabric.Group([circle, label], {
+      left: pos.x, top: pos.y,
+      originX: 'center', originY: 'center',
+      selectable: false, evented: true,
+      _drillType: 'player', _playerType: letter, _playerIndex: index
+    });
+
+    return group;
+  }
+
+  function createNet(colour, pos, s) {
+    const w = CONFIG.NET_HEIGHT * s;
+    const h = CONFIG.NET_WIDTH * s;
+    const borderThickness = (CONFIG.RINK_BORDER_WIDTH / 3) * s;
+
+    const rect = new fabric.Rect({
+      width: w, height: h,
+      fill: '#cccccc',
+      stroke: colour,
+      strokeWidth: borderThickness,
+      originX: 'center', originY: 'center'
+    });
+
+    // Cross-hatch lines for net appearance
+    const line1 = new fabric.Line([-w/2, -h/2, w/2, h/2], {
+      stroke: colour, strokeWidth: 0.5 * s, originX: 'center', originY: 'center',
+      selectable: false, evented: false
+    });
+    const line2 = new fabric.Line([w/2, -h/2, -w/2, h/2], {
+      stroke: colour, strokeWidth: 0.5 * s, originX: 'center', originY: 'center',
+      selectable: false, evented: false
+    });
+
+    const group = new fabric.Group([rect, line1, line2], {
+      left: pos.x, top: pos.y,
+      originX: 'center', originY: 'center',
+      selectable: false, evented: true,
+      _drillType: 'net'
+    });
+
+    return group;
+  }
+
+  function createPylon(colour, pos, s) {
+    const size = CONFIG.PYLON_SIZE * s;
+    const h = size * Math.sqrt(3) / 2;
+
+    const triangle = new fabric.Triangle({
+      width: size, height: h,
+      fill: colour,
+      stroke: colour,
+      strokeWidth: 0.5 * s,
+      originX: 'center', originY: 'center'
+    });
+
+    const group = new fabric.Group([triangle], {
+      left: pos.x, top: pos.y,
+      originX: 'center', originY: 'center',
+      selectable: false, evented: true,
+      _drillType: 'pylon'
+    });
+
+    return group;
+  }
+
+  function createSinglePuck(colour, pos, s) {
+    const r = CONFIG.PUCK_RADIUS * s;
+    const circle = new fabric.Circle({
+      radius: r,
+      fill: colour,
+      originX: 'center', originY: 'center'
+    });
+
+    const group = new fabric.Group([circle], {
+      left: pos.x, top: pos.y,
+      originX: 'center', originY: 'center',
+      selectable: false, evented: true,
+      _drillType: 'puck1'
+    });
+
+    return group;
+  }
+
+  function createMultiPuck(colour, pos, s) {
+    const r = CONFIG.PUCK_RADIUS * s;
+    const g = r * 2 + 2.5 * s; // diameter + 2-3px spacing
+
+    const circles = [];
+
+    // Pyramid/triangle: 3 on bottom, 2 on top
+    const offsets = [
+      { x: -g, y: g * 0.5 },
+      { x: 0, y: g * 0.5 },
+      { x: g, y: g * 0.5 },
+      { x: -g * 0.5, y: -g * 0.5 },
+      { x: g * 0.5, y: -g * 0.5 }
+    ];
+
+    offsets.forEach(off => {
+      circles.push(new fabric.Circle({
+        radius: r,
+        fill: colour,
+        left: off.x, top: off.y,
+        originX: 'center', originY: 'center'
+      }));
+    });
+
+    const group = new fabric.Group(circles, {
+      left: pos.x, top: pos.y,
+      originX: 'center', originY: 'center',
+      selectable: false, evented: true,
+      _drillType: 'puck5'
+    });
+
+    return group;
+  }
+
+  // ==================== SEMANTIC SERIALIZATION ====================
+  // Extracts drill data as a simple array of {type, ...params} objects.
+  // Positions stored in logical coordinates (0-200 x 0-85).
+  // Rendering code is NOT stored — only what the coach placed.
+  function serializeDrill() {
+    const items = [];
+    canvas.getObjects().forEach(obj => {
+      if (obj._isRink || obj._isRinkBg || obj._isPreview) return;
+
+      if (obj._drillType === 'line') {
+        items.push({
+          kind: 'line',
+          lineType: obj._lineType,
+          startX: obj._logStartX,
+          startY: obj._logStartY,
+          endX: obj._logEndX,
+          endY: obj._logEndY,
+          colour: obj._colour
+        });
+      } else if (obj._objectType) {
+        const entry = {
+          kind: 'object',
+          objectType: obj._objectType,
+          x: obj._logX,
+          y: obj._logY,
+          colour: obj._colour
+        };
+        if (obj._playerIndex !== undefined) entry.index = obj._playerIndex;
+        items.push(entry);
+      }
+    });
+    return items;
+  }
+
+  // Re-creates all drill objects from semantic data using current rendering code.
+  // Rink is redrawn fresh, so style updates apply automatically.
+  function renderDrill(items) {
+    canvas.clear();
+    drawDefaultRink();
+
+    items.forEach(item => {
+      if (item.kind === 'line') {
+        createLine(item.lineType,
+          { x: item.startX, y: item.startY },
+          { x: item.endX, y: item.endY },
+          item.colour);
+      } else if (item.kind === 'object') {
+        const obj = placeObject(item.objectType,
+          { x: item.x, y: item.y },
+          item.colour,
+          item.index);
+        if (obj) canvas.add(obj);
+      }
+    });
+
+    canvas.renderAll();
+  }
+
+  // ==================== UNDO / REDO ====================
+  function saveHistoryState() {
+    if (suppressHistory) return;
+
+    const state = JSON.stringify(serializeDrill());
+
+    if (historyIndex < history.length - 1) {
+      history = history.slice(0, historyIndex + 1);
+    }
+
+    history.push(state);
+
+    if (history.length > CONFIG.MAX_HISTORY) {
+      history.shift();
+    }
+
+    historyIndex = history.length - 1;
+    updateUndoRedoButtons();
+  }
+
+  function undo() {
+    if (historyIndex <= 0) return;
+    historyIndex--;
+    loadHistoryState(historyIndex);
+  }
+
+  function redo() {
+    if (historyIndex >= history.length - 1) return;
+    historyIndex++;
+    loadHistoryState(historyIndex);
+  }
+
+  function loadHistoryState(index) {
+    suppressHistory = true;
+    const items = JSON.parse(history[index]);
+    renderDrill(items);
+    suppressHistory = false;
+    updateUndoRedoButtons();
+    autoSave();
+  }
+
+  function updateUndoRedoButtons() {
+    document.getElementById('btn-undo').disabled = historyIndex <= 0;
+    document.getElementById('btn-redo').disabled = historyIndex >= history.length - 1;
+  }
+
+  // ==================== ACTIONS ====================
+  function setupActions() {
+    document.getElementById('btn-undo').addEventListener('click', undo);
+    document.getElementById('btn-redo').addEventListener('click', redo);
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      if (!confirm('Are you sure you want to clear the entire canvas?')) return;
+      resetCanvas();
+    });
+
+    document.getElementById('btn-save-json').addEventListener('click', exportJSON);
+    document.getElementById('btn-load-json').addEventListener('click', () => {
+      document.getElementById('file-json').click();
+    });
+    document.getElementById('file-json').addEventListener('change', importJSON);
+
+    document.getElementById('btn-export-pdf').addEventListener('click', exportPDF);
+
+    document.getElementById('btn-upload-bg').addEventListener('click', () => {
+      document.getElementById('file-bg').click();
+    });
+    document.getElementById('file-bg').addEventListener('change', uploadBackground);
+
+    // Auto-save on title/description change
+    document.getElementById('drill-title').addEventListener('input', autoSave);
+    document.getElementById('drill-description').addEventListener('input', autoSave);
+  }
+
+  function resetCanvas() {
+    canvas.clear();
+    drawDefaultRink();
+    cancelLineDrawing();
+    canvas.renderAll();
+    saveHistoryState();
+    autoSave();
+  }
+
+  // ==================== EXPORT / IMPORT ====================
+  function exportJSON() {
+    const state = {
+      version: 2,
+      title: document.getElementById('drill-title').value,
+      description: document.getElementById('drill-description').value,
+      backgroundUrl: CONFIG.BACKGROUND_URL,
+      items: serializeDrill()
+    };
+
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (document.getElementById('drill-title').value || 'drill') + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function importJSON(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        const state = JSON.parse(ev.target.result);
+        document.getElementById('drill-title').value = state.title || '';
+        document.getElementById('drill-description').value = state.description || '';
+        CONFIG.BACKGROUND_URL = state.backgroundUrl || null;
+
+        suppressHistory = true;
+        renderDrill(state.items || []);
+        suppressHistory = false;
+        saveHistoryState();
+        autoSave();
+      } catch (err) {
+        alert('Failed to load JSON: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  function exportPDF() {
+    const { jsPDF } = window.jspdf;
+
+    // Landscape, matching rink aspect ratio
+    const pdfW = 297; // A4 landscape width mm
+    const pdfH = 210; // A4 landscape height mm
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+    const title = document.getElementById('drill-title').value || 'Untitled Drill';
+    const desc = document.getElementById('drill-description').value || '';
+
+    // Title
+    doc.setFontSize(18);
+    doc.setFont(undefined, 'bold');
+    doc.text(title, pdfW / 2, 15, { align: 'center' });
+
+    // Description
+    if (desc) {
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'normal');
+      const lines = doc.splitTextToSize(desc, pdfW - 40);
+      doc.text(lines, pdfW / 2, 23, { align: 'center' });
+    }
+
+    // Canvas image
+    const dataUrl = canvas.toDataURL({ format: 'png', multiplier: 2 });
+    const imgY = desc ? 30 : 22;
+    const imgH = pdfH - imgY - 15;
+    const imgW = imgH * (CONFIG.RINK_W / CONFIG.RINK_H);
+    const imgX = (pdfW - imgW) / 2;
+
+    doc.addImage(dataUrl, 'PNG', imgX, imgY, imgW, imgH);
+
+    // Watermark/footer
+    if (CONFIG.PDF_WATERMARK) {
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(CONFIG.PDF_WATERMARK, pdfW / 2, pdfH - 5, { align: 'center' });
+    }
+
+    doc.save(title.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf');
+  }
+
+  function uploadBackground(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const url = ev.target.result;
+      CONFIG.BACKGROUND_URL = url;
+
+      // Remove existing rink elements
+      canvas.getObjects().slice().forEach(obj => {
+        if (obj._isRink || obj._isRinkBg) canvas.remove(obj);
+      });
+
+      // Add new background
+      fabric.Image.fromURL(url, function(img) {
+        img.set({
+          left: 0, top: 0,
+          scaleX: canvas.width / img.width,
+          scaleY: canvas.height / img.height,
+          selectable: false, evented: false,
+          _isRinkBg: true
+        });
+        canvas.add(img);
+        canvas.sendToBack(img);
+        canvas.renderAll();
+        saveHistoryState();
+        autoSave();
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
+  // ==================== PERSISTENCE ====================
+  function autoSave() {
+    try {
+      const state = {
+        version: 2,
+        title: document.getElementById('drill-title').value,
+        description: document.getElementById('drill-description').value,
+        backgroundUrl: CONFIG.BACKGROUND_URL,
+        items: serializeDrill()
+      };
+      localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      // Storage full or unavailable — silently fail
+    }
+  }
+
+  function restoreFromStorage() {
+    try {
+      const raw = localStorage.getItem(CONFIG.STORAGE_KEY);
+      if (!raw) return;
+
+      const state = JSON.parse(raw);
+      document.getElementById('drill-title').value = state.title || '';
+      document.getElementById('drill-description').value = state.description || '';
+      CONFIG.BACKGROUND_URL = state.backgroundUrl || null;
+
+      suppressHistory = true;
+      renderDrill(state.items || []);
+      suppressHistory = false;
+    } catch (e) {
+      // Corrupted storage — start fresh
+    }
+  }
+
+  // ==================== KEYBOARD ====================
+  function setupKeyboard() {
+    document.addEventListener('keydown', (e) => {
+      // ESC — deselect tool
+      if (e.key === 'Escape') {
+        deselectTool();
+        return;
+      }
+
+      // Cmd/Ctrl+Z — undo
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+        return;
+      }
+
+      // Cmd/Ctrl+Y or Cmd/Ctrl+Shift+Z — redo
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+    });
+  }
+
+  // ==================== STATUS ====================
+  function updateStatus() {
+    const el = document.getElementById('status-tool');
+    if (!activeTool) {
+      el.textContent = 'No tool selected';
+    } else {
+      const names = {
+        skate: 'Skating Line', puck: 'Puck Line', pass: 'Passing Line', shoot: 'Shooting Line',
+        forward: 'Forward', defense: 'Defenseman', goalie: 'Goalie',
+        net: 'Hockey Net', pylon: 'Pylon', puck1: 'Puck', puck5: 'Multi-Puck'
+      };
+      el.textContent = `Tool: ${names[activeTool] || activeTool}`;
+    }
+  }
+
+  // ==================== START ====================
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>
