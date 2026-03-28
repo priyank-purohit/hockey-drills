@@ -25,6 +25,10 @@
   --radius: 8px;
   --radius-sm: 4px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --chip-bg: #e3f2fd;
+  --chip-text: #1565c0;
+  --chip-border: #90caf9;
+  --success: #388e3c;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -39,6 +43,9 @@
     --input-bg: #2c2c2c;
     --shadow: 0 2px 4px rgba(0,0,0,0.3);
     --shadow-lg: 0 4px 12px rgba(0,0,0,0.4);
+    --chip-bg: #1a3a5c;
+    --chip-text: #90caf9;
+    --chip-border: #1565c0;
   }
 }
 
@@ -58,6 +65,61 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: 12px 5%;
+}
+
+/* ========== Tab Navigation ========== */
+.tab-bar {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.tab-btn {
+  padding: 10px 24px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+.breadcrumb-bar {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 0 8px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.breadcrumb-bar .breadcrumb-title {
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* ========== Tab Content ========== */
+.tab-content {
+  display: none;
+}
+.tab-content.active {
+  display: block;
 }
 
 /* ========== Title & Description ========== */
@@ -96,6 +158,80 @@ body {
   resize: vertical;
   min-height: 40px;
   max-height: 120px;
+}
+
+/* ========== Tags Section ========== */
+.tags-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+}
+
+.tags-section .tag-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  margin-right: 2px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  border: 1px solid var(--chip-border);
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tag-chip .tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--chip-text);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.tag-chip .tag-remove:hover {
+  background: rgba(0,0,0,0.1);
+}
+
+.tag-add-wrapper {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+.tag-add-input {
+  width: 100px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 11px;
+  outline: none;
+}
+
+.tag-add-input:focus {
+  border-color: var(--primary);
 }
 
 /* ========== Toolbar ========== */
@@ -197,6 +333,16 @@ body {
 .action-btn:hover { background: var(--surface-hover); }
 .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.action-btn.primary {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.action-btn.primary:hover {
+  background: var(--primary-hover);
+}
+
 /* ========== Colour Picker ========== */
 .colour-swatch {
   width: 24px;
@@ -250,9 +396,257 @@ body {
   display: none;
 }
 
+/* ========== Library View ========== */
+.library-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.library-search {
+  flex: 1;
+  min-width: 180px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.library-search:focus {
+  border-color: var(--primary);
+}
+
+.category-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.15s;
+}
+
+.category-header:hover {
+  background: var(--surface-hover);
+}
+
+.category-collapse-icon {
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.category-collapse-icon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.category-name {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+
+.category-name-input {
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text);
+  font-family: var(--font);
+  padding: 2px 6px;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.category-badge {
+  font-size: 11px;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.category-delete-btn {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.category-delete-btn:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.category-delete-btn.confirm {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+
+.category-body {
+  border-top: 1px solid var(--border);
+  padding: 4px 0;
+}
+
+.category-body.collapsed {
+  display: none;
+}
+
+.drill-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+
+.drill-card:last-child {
+  border-bottom: none;
+}
+
+.drill-card:hover {
+  background: var(--surface-hover);
+}
+
+.drill-card-info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.drill-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drill-card-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.drill-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.drill-card-date {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.drill-card-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  border: 1px solid var(--chip-border);
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.drill-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.drill-card-actions button {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.drill-card-actions button:hover {
+  background: var(--surface-hover);
+}
+
+.drill-card-actions button.danger-action {
+  color: var(--danger);
+}
+
+.drill-card-actions button.danger-action:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.drill-card-actions button.open-action {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.drill-card-actions button.open-action:hover {
+  background: var(--primary-hover);
+}
+
+.library-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.library-empty {
+  text-align: center;
+  padding: 24px 14px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
 /* ========== Responsive ========== */
 
-/* Tablet (601–1024px) */
+/* Tablet (601-1024px) */
 @media (min-width: 601px) and (max-width: 1024px) {
   .tool-btn { padding: 8px 14px; font-size: 13px; }
   .action-btn { padding: 8px 12px; font-size: 13px; }
@@ -260,7 +654,7 @@ body {
   .toolbar-section { gap: 8px; }
 }
 
-/* Phone (≤600px) */
+/* Phone (<=600px) */
 @media (max-width: 600px) {
   #app { padding: 8px 5%; }
   .tool-btn { padding: 7px 10px; font-size: 12px; }
@@ -268,84 +662,123 @@ body {
   .colour-swatch { width: 28px; height: 28px; }
   .toolbar-section { gap: 6px; }
   .drill-header input#drill-title { font-size: 16px; }
+  .tab-btn { padding: 8px 16px; font-size: 13px; }
+  .drill-card { flex-direction: column; }
+  .drill-card-actions { flex-direction: row; flex-wrap: wrap; }
 }
 </style>
 </head>
 <body>
 
 <div id="app">
-  <!-- Drill Title & Description -->
-  <div class="drill-header">
-    <input type="text" id="drill-title" placeholder="Drill Title" />
-    <textarea id="drill-description" placeholder="Drill description..." rows="1"></textarea>
+  <!-- Tab Navigation -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="editor">Editor</button>
+    <button class="tab-btn" data-tab="library">Library</button>
+  </div>
+  <div class="breadcrumb-bar" id="breadcrumb">
+    Editing: <span class="breadcrumb-title" id="breadcrumb-title">Untitled Drill</span>
   </div>
 
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <!-- Lines -->
-    <div class="toolbar-section">
-      <span class="toolbar-label">Lines</span>
-      <button class="tool-btn" data-tool="skate" title="Skating line (solid + arrow)">&#8594; Skate</button>
-      <button class="tool-btn" data-tool="puck" title="Skating with puck (squiggly + arrow)">&#12336; Puck</button>
-      <button class="tool-btn" data-tool="pass" title="Passing line (dashed + arrow)">&#8674; Pass</button>
-      <button class="tool-btn" data-tool="shoot" title="Shooting line (long dash + arrow)">&#10148; Shoot</button>
-
-      <div class="toolbar-divider"></div>
-
-      <!-- Players -->
-      <span class="toolbar-label">Players</span>
-      <button class="tool-btn" data-tool="forward" title="Forward">F</button>
-      <button class="tool-btn" data-tool="defense" title="Defenseman">D</button>
-      <button class="tool-btn" data-tool="goalie" title="Goalie">G</button>
-
-      <div class="toolbar-divider"></div>
-
-      <!-- Equipment -->
-      <span class="toolbar-label">Equip</span>
-      <button class="tool-btn" data-tool="net" title="Hockey net">&#9632; Net</button>
-      <button class="tool-btn" data-tool="pylon" title="Pylon/cone">&#9650; Pylon</button>
-      <button class="tool-btn" data-tool="puck1" title="Single puck">&#9679; Puck</button>
-      <button class="tool-btn" data-tool="puck5" title="5 pucks">&#9679;&#215;5</button>
+  <!-- ==================== EDITOR TAB ==================== -->
+  <div class="tab-content active" id="tab-editor">
+    <!-- Drill Title & Description -->
+    <div class="drill-header">
+      <input type="text" id="drill-title" placeholder="Drill Title" />
+      <textarea id="drill-description" placeholder="Drill description..." rows="1"></textarea>
+      <!-- Tags -->
+      <div class="tags-section" id="tags-section">
+        <span class="tag-label">Tags</span>
+        <div id="tag-chips"></div>
+        <div class="tag-add-wrapper">
+          <input type="text" class="tag-add-input" id="tag-add-input" placeholder="Add tag..." list="tag-suggestions" />
+          <datalist id="tag-suggestions"></datalist>
+        </div>
+      </div>
     </div>
 
-    <!-- Colours + Actions -->
-    <div class="toolbar-section">
-      <span class="toolbar-label">Colour</span>
-      <div class="colour-swatch" data-colour="#d32f2f" style="background:#d32f2f" title="Red"></div>
-      <div class="colour-swatch" data-colour="#1976d2" style="background:#1976d2" title="Blue"></div>
-      <div class="colour-swatch" data-colour="#388e3c" style="background:#388e3c" title="Green"></div>
-      <div class="colour-swatch" data-colour="#fbc02d" style="background:#fbc02d" title="Yellow"></div>
-      <div class="colour-swatch" data-colour="#f57c00" style="background:#f57c00" title="Orange"></div>
-      <div class="colour-swatch" data-colour="#212121" style="background:#212121" title="Black"></div>
-      <div class="colour-swatch" data-colour="#7b1fa2" style="background:#7b1fa2" title="Purple"></div>
-      <div class="colour-swatch" data-colour="#00897b" style="background:#00897b" title="Teal"></div>
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <!-- Lines -->
+      <div class="toolbar-section">
+        <span class="toolbar-label">Lines</span>
+        <button class="tool-btn" data-tool="skate" title="Skating line (solid + arrow)">&#8594; Skate</button>
+        <button class="tool-btn" data-tool="puck" title="Skating with puck (squiggly + arrow)">&#12336; Puck</button>
+        <button class="tool-btn" data-tool="pass" title="Passing line (dashed + arrow)">&#8674; Pass</button>
+        <button class="tool-btn" data-tool="shoot" title="Shooting line (long dash + arrow)">&#10148; Shoot</button>
 
-      <div class="toolbar-divider"></div>
+        <div class="toolbar-divider"></div>
 
-      <button class="action-btn" id="btn-undo" title="Undo (Ctrl+Z)" disabled>&#8630; Undo</button>
-      <button class="action-btn" id="btn-redo" title="Redo (Ctrl+Y)" disabled>&#8631; Redo</button>
+        <!-- Players -->
+        <span class="toolbar-label">Players</span>
+        <button class="tool-btn" data-tool="forward" title="Forward">F</button>
+        <button class="tool-btn" data-tool="defense" title="Defenseman">D</button>
+        <button class="tool-btn" data-tool="goalie" title="Goalie">G</button>
 
-      <div class="toolbar-divider"></div>
+        <div class="toolbar-divider"></div>
 
-      <button class="action-btn" id="btn-reset" title="Clear canvas">&#10060; Reset</button>
-      <button class="action-btn" id="btn-save-json" title="Save as JSON">&#128190; Save</button>
-      <button class="action-btn" id="btn-load-json" title="Load JSON">&#128194; Load</button>
-      <button class="action-btn" id="btn-export-pdf" title="Export PDF">&#128196; PDF</button>
-      <button class="action-btn" id="btn-upload-bg" title="Upload rink background">&#128247; BG</button>
-      <input type="file" id="file-bg" accept="image/*" style="display:none" />
-      <input type="file" id="file-json" accept=".json,application/json" style="display:none" />
+        <!-- Equipment -->
+        <span class="toolbar-label">Equip</span>
+        <button class="tool-btn" data-tool="net" title="Hockey net">&#9632; Net</button>
+        <button class="tool-btn" data-tool="pylon" title="Pylon/cone">&#9650; Pylon</button>
+        <button class="tool-btn" data-tool="puck1" title="Single puck">&#9679; Puck</button>
+        <button class="tool-btn" data-tool="puck5" title="5 pucks">&#9679;&#215;5</button>
+      </div>
+
+      <!-- Colours + Actions -->
+      <div class="toolbar-section">
+        <span class="toolbar-label">Colour</span>
+        <div class="colour-swatch" data-colour="#d32f2f" style="background:#d32f2f" title="Red"></div>
+        <div class="colour-swatch" data-colour="#1976d2" style="background:#1976d2" title="Blue"></div>
+        <div class="colour-swatch" data-colour="#388e3c" style="background:#388e3c" title="Green"></div>
+        <div class="colour-swatch" data-colour="#fbc02d" style="background:#fbc02d" title="Yellow"></div>
+        <div class="colour-swatch" data-colour="#f57c00" style="background:#f57c00" title="Orange"></div>
+        <div class="colour-swatch" data-colour="#212121" style="background:#212121" title="Black"></div>
+        <div class="colour-swatch" data-colour="#7b1fa2" style="background:#7b1fa2" title="Purple"></div>
+        <div class="colour-swatch" data-colour="#00897b" style="background:#00897b" title="Teal"></div>
+
+        <div class="toolbar-divider"></div>
+
+        <button class="action-btn" id="btn-undo" title="Undo (Ctrl+Z)" disabled>&#8630; Undo</button>
+        <button class="action-btn" id="btn-redo" title="Redo (Ctrl+Y)" disabled>&#8631; Redo</button>
+
+        <div class="toolbar-divider"></div>
+
+        <button class="action-btn primary" id="btn-new-drill" title="Create new drill">&#10010; New Drill</button>
+        <button class="action-btn" id="btn-reset" title="Clear canvas">&#10060; Reset</button>
+        <button class="action-btn" id="btn-save-json" title="Save as JSON">&#128190; Save</button>
+        <button class="action-btn" id="btn-load-json" title="Load JSON">&#128194; Load</button>
+        <button class="action-btn" id="btn-export-pdf" title="Export PDF">&#128196; PDF</button>
+        <button class="action-btn" id="btn-upload-bg" title="Upload rink background">&#128247; BG</button>
+        <input type="file" id="file-bg" accept="image/*" style="display:none" />
+        <input type="file" id="file-json" accept=".json,application/json" style="display:none" />
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-container-wrapper" id="canvas-wrapper">
+      <div class="line-preview-hint" id="line-hint">Click on rink to set end point</div>
+      <canvas id="rink-canvas"></canvas>
+    </div>
+
+    <div class="status-bar">
+      <span id="status-tool">No tool selected</span>
+      <span id="status-hint">ESC to deselect | Double-click to delete</span>
     </div>
   </div>
 
-  <!-- Canvas -->
-  <div class="canvas-container-wrapper" id="canvas-wrapper">
-    <div class="line-preview-hint" id="line-hint">Click on rink to set end point</div>
-    <canvas id="rink-canvas"></canvas>
-  </div>
-
-  <div class="status-bar">
-    <span id="status-tool">No tool selected</span>
-    <span id="status-hint">ESC to deselect | Double-click to delete</span>
+  <!-- ==================== LIBRARY TAB ==================== -->
+  <div class="tab-content" id="tab-library">
+    <div class="library-header">
+      <input type="text" class="library-search" id="library-search" placeholder="Search drills..." />
+      <button class="action-btn" id="btn-new-category">&#10010; New Category</button>
+    </div>
+    <div id="library-list"></div>
+    <div class="library-footer">
+      <button class="action-btn" id="btn-export-library">&#128190; Export Library</button>
+      <button class="action-btn" id="btn-import-library">&#128194; Import Library</button>
+      <input type="file" id="file-library-import" accept=".json,application/json" style="display:none" />
+    </div>
   </div>
 </div>
 
@@ -397,8 +830,9 @@ body {
     // PDF watermark/footer
     PDF_WATERMARK: 'Hockey Drill Maker',
 
-    // LocalStorage key
-    STORAGE_KEY: 'hockey-drill-maker-state',
+    // LocalStorage keys
+    OLD_STORAGE_KEY: 'hockey-drill-maker-state',
+    LIBRARY_KEY: 'hockey-drill-library',
 
     // Line types
     LINE_TOOLS: ['skate', 'puck', 'pass', 'shoot'],
@@ -411,6 +845,657 @@ body {
     WAVE_AMP: 1.5,
     WAVE_FREQ: 0.8
   };
+
+  // ==================== UUID HELPER ====================
+  function generateId() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9);
+  }
+
+  // ==================== LIBRARY DATA MODEL ====================
+  const LIBRARY_KEY = CONFIG.LIBRARY_KEY;
+
+  function loadLibrary() {
+    try {
+      const raw = localStorage.getItem(LIBRARY_KEY);
+      if (raw) {
+        const lib = JSON.parse(raw);
+        if (lib && lib.version === 3) return lib;
+      }
+    } catch (e) { /* corrupted */ }
+
+    // Check for old v2 data migration
+    try {
+      const oldRaw = localStorage.getItem(CONFIG.OLD_STORAGE_KEY);
+      if (oldRaw) {
+        const oldState = JSON.parse(oldRaw);
+        const drillId = generateId();
+        const now = new Date().toISOString();
+        const lib = {
+          version: 3,
+          categories: [],
+          drills: [{
+            id: drillId,
+            title: oldState.title || '',
+            description: oldState.description || '',
+            tags: [],
+            backgroundUrl: oldState.backgroundUrl || null,
+            items: oldState.items || [],
+            createdAt: now,
+            modifiedAt: now
+          }],
+          activeDrillId: drillId
+        };
+        localStorage.removeItem(CONFIG.OLD_STORAGE_KEY);
+        saveLibrary(lib);
+        return lib;
+      }
+    } catch (e) { /* ignore */ }
+
+    // Nothing found — create empty library with one blank drill
+    const drillId = generateId();
+    const now = new Date().toISOString();
+    const lib = {
+      version: 3,
+      categories: [],
+      drills: [{
+        id: drillId,
+        title: '',
+        description: '',
+        tags: [],
+        backgroundUrl: null,
+        items: [],
+        createdAt: now,
+        modifiedAt: now
+      }],
+      activeDrillId: drillId
+    };
+    saveLibrary(lib);
+    return lib;
+  }
+
+  function saveLibrary(lib) {
+    try {
+      localStorage.setItem(LIBRARY_KEY, JSON.stringify(lib));
+    } catch (e) { /* storage full — silently fail */ }
+  }
+
+  function getActiveDrill(lib) {
+    return lib.drills.find(d => d.id === lib.activeDrillId) || lib.drills[0] || null;
+  }
+
+  function createNewDrill() {
+    const lib = loadLibrary();
+    const drillId = generateId();
+    const now = new Date().toISOString();
+    const drill = {
+      id: drillId,
+      title: '',
+      description: '',
+      tags: [],
+      backgroundUrl: null,
+      items: [],
+      createdAt: now,
+      modifiedAt: now
+    };
+    lib.drills.push(drill);
+    lib.activeDrillId = drillId;
+    saveLibrary(lib);
+    return drill;
+  }
+
+  function openDrill(id) {
+    const lib = loadLibrary();
+    const drill = lib.drills.find(d => d.id === id);
+    if (!drill) return;
+    lib.activeDrillId = id;
+    saveLibrary(lib);
+
+    // Load drill into editor
+    document.getElementById('drill-title').value = drill.title || '';
+    document.getElementById('drill-description').value = drill.description || '';
+    CONFIG.BACKGROUND_URL = drill.backgroundUrl || null;
+    currentTags = [...(drill.tags || [])];
+    renderTagChips();
+    updateTagSuggestions();
+
+    suppressHistory = true;
+    renderDrill(drill.items || []);
+    suppressHistory = false;
+    history = [];
+    historyIndex = -1;
+    saveHistoryState();
+
+    updateBreadcrumb();
+    switchTab('editor');
+  }
+
+  function duplicateDrill(id) {
+    const lib = loadLibrary();
+    const source = lib.drills.find(d => d.id === id);
+    if (!source) return;
+    const now = new Date().toISOString();
+    const newDrill = {
+      id: generateId(),
+      title: (source.title || 'Untitled Drill') + ' (copy)',
+      description: source.description || '',
+      tags: [...(source.tags || [])],
+      backgroundUrl: source.backgroundUrl || null,
+      items: JSON.parse(JSON.stringify(source.items || [])),
+      createdAt: now,
+      modifiedAt: now
+    };
+    lib.drills.push(newDrill);
+    saveLibrary(lib);
+    renderLibrary();
+  }
+
+  // Track which drills have pending delete confirmations
+  const deleteDrillPending = {};
+
+  function deleteDrill(id) {
+    if (!deleteDrillPending[id]) {
+      deleteDrillPending[id] = true;
+      renderLibrary();
+      setTimeout(() => {
+        if (deleteDrillPending[id]) {
+          delete deleteDrillPending[id];
+          renderLibrary();
+        }
+      }, 3000);
+      return;
+    }
+    delete deleteDrillPending[id];
+
+    const lib = loadLibrary();
+    lib.drills = lib.drills.filter(d => d.id !== id);
+    if (lib.activeDrillId === id) {
+      if (lib.drills.length === 0) {
+        // Create a new blank drill
+        const newDrill = {
+          id: generateId(),
+          title: '',
+          description: '',
+          tags: [],
+          backgroundUrl: null,
+          items: [],
+          createdAt: new Date().toISOString(),
+          modifiedAt: new Date().toISOString()
+        };
+        lib.drills.push(newDrill);
+        lib.activeDrillId = newDrill.id;
+      } else {
+        lib.activeDrillId = lib.drills[0].id;
+      }
+      saveLibrary(lib);
+      openDrill(lib.activeDrillId);
+    } else {
+      saveLibrary(lib);
+    }
+    renderLibrary();
+  }
+
+  function exportDrillJSON(id) {
+    const lib = loadLibrary();
+    const drill = lib.drills.find(d => d.id === id);
+    if (!drill) return;
+    // Export in v2 compatible format
+    const state = {
+      version: 2,
+      title: drill.title || '',
+      description: drill.description || '',
+      backgroundUrl: drill.backgroundUrl || null,
+      items: drill.items || []
+    };
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (drill.title || 'drill') + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // Track category delete confirmations
+  const deleteCategoryPending = {};
+
+  function deleteCategory(name) {
+    if (!deleteCategoryPending[name]) {
+      deleteCategoryPending[name] = true;
+      renderLibrary();
+      setTimeout(() => {
+        if (deleteCategoryPending[name]) {
+          delete deleteCategoryPending[name];
+          renderLibrary();
+        }
+      }, 3000);
+      return;
+    }
+    delete deleteCategoryPending[name];
+
+    const lib = loadLibrary();
+    lib.categories = lib.categories.filter(c => c !== name);
+    lib.drills.forEach(d => {
+      d.tags = (d.tags || []).filter(t => t !== name);
+    });
+    saveLibrary(lib);
+
+    // Update current drill tags if active
+    const activeDrill = getActiveDrill(lib);
+    if (activeDrill) {
+      currentTags = [...(activeDrill.tags || [])];
+      renderTagChips();
+      updateTagSuggestions();
+    }
+    renderLibrary();
+  }
+
+  function renameCategory(oldName, newName) {
+    if (!newName || newName === oldName) return;
+    const lib = loadLibrary();
+    const idx = lib.categories.indexOf(oldName);
+    if (idx !== -1) {
+      lib.categories[idx] = newName;
+    }
+    lib.drills.forEach(d => {
+      d.tags = (d.tags || []).map(t => t === oldName ? newName : t);
+    });
+    saveLibrary(lib);
+
+    // Update current drill tags if affected
+    const activeDrill = getActiveDrill(lib);
+    if (activeDrill) {
+      currentTags = [...(activeDrill.tags || [])];
+      renderTagChips();
+      updateTagSuggestions();
+    }
+    renderLibrary();
+  }
+
+  function exportLibraryJSON() {
+    const lib = loadLibrary();
+    const blob = new Blob([JSON.stringify(lib, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'hockey-drill-library.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function importLibraryJSON(file) {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        if (!imported || imported.version !== 3 || !Array.isArray(imported.drills)) {
+          alert('Invalid library file. Expected version 3 library format.');
+          return;
+        }
+
+        const choice = prompt('Type "merge" to add to existing library, or "replace" to overwrite everything:');
+        if (!choice) return;
+
+        const mode = choice.trim().toLowerCase();
+        if (mode === 'replace') {
+          if (!confirm('This will replace your entire library. Are you sure?')) return;
+          saveLibrary(imported);
+          const lib = loadLibrary();
+          if (lib.drills.length > 0) {
+            openDrill(lib.activeDrillId || lib.drills[0].id);
+          }
+          renderLibrary();
+        } else if (mode === 'merge') {
+          const lib = loadLibrary();
+          const existingIds = new Set(lib.drills.map(d => d.id));
+
+          // Add new categories
+          (imported.categories || []).forEach(cat => {
+            if (!lib.categories.includes(cat)) {
+              lib.categories.push(cat);
+            }
+          });
+
+          // Add drills with non-duplicate IDs
+          let added = 0;
+          (imported.drills || []).forEach(drill => {
+            if (!existingIds.has(drill.id)) {
+              lib.drills.push(drill);
+              added++;
+            }
+          });
+
+          saveLibrary(lib);
+          renderLibrary();
+          updateTagSuggestions();
+          alert('Merged: ' + added + ' new drill(s) added. Duplicates were skipped.');
+        } else {
+          alert('Unknown option. Please type "merge" or "replace".');
+        }
+      } catch (err) {
+        alert('Failed to import library: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ==================== RELATIVE TIME ====================
+  function relativeTime(isoDate) {
+    if (!isoDate) return '';
+    const now = Date.now();
+    const then = new Date(isoDate).getTime();
+    const diffMs = now - then;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHr / 24);
+
+    if (diffSec < 60) return 'just now';
+    if (diffMin < 60) return diffMin + ' min ago';
+    if (diffHr < 24) return diffHr + ' hr ago';
+    if (diffDay === 1) return 'yesterday';
+    if (diffDay < 30) return diffDay + ' days ago';
+    return new Date(isoDate).toLocaleDateString();
+  }
+
+  // ==================== RENDER LIBRARY VIEW ====================
+  // Track collapsed state for categories
+  const collapsedCategories = {};
+
+  function renderLibrary() {
+    const lib = loadLibrary();
+    const container = document.getElementById('library-list');
+    const searchTerm = (document.getElementById('library-search').value || '').toLowerCase().trim();
+
+    // Filter drills by search
+    let drills = lib.drills;
+    if (searchTerm) {
+      drills = drills.filter(d =>
+        (d.title || '').toLowerCase().includes(searchTerm) ||
+        (d.description || '').toLowerCase().includes(searchTerm) ||
+        (d.tags || []).some(t => t.toLowerCase().includes(searchTerm))
+      );
+    }
+
+    // Group drills by category
+    const categorized = {};
+    (lib.categories || []).forEach(cat => {
+      categorized[cat] = [];
+    });
+
+    const uncategorized = [];
+
+    drills.forEach(drill => {
+      const tags = drill.tags || [];
+      if (tags.length === 0) {
+        uncategorized.push(drill);
+      } else {
+        let placed = false;
+        tags.forEach(tag => {
+          if (!categorized[tag]) categorized[tag] = [];
+          categorized[tag].push(drill);
+          placed = true;
+        });
+      }
+    });
+
+    let html = '';
+
+    // Render each category
+    const allCats = Object.keys(categorized);
+    allCats.forEach(cat => {
+      const catDrills = categorized[cat];
+      const isCollapsed = collapsedCategories[cat];
+      const isDeletePending = deleteCategoryPending[cat];
+
+      html += '<div class="category-section">';
+      html += '<div class="category-header" data-category="' + escHtml(cat) + '">';
+      html += '<span class="category-collapse-icon' + (isCollapsed ? ' collapsed' : '') + '">&#9660;</span>';
+      html += '<span class="category-name" data-cat-name="' + escHtml(cat) + '">' + escHtml(cat) + '</span>';
+      html += '<span class="category-badge">' + catDrills.length + '</span>';
+      html += '<button class="category-delete-btn' + (isDeletePending ? ' confirm' : '') + '" data-delete-cat="' + escHtml(cat) + '">'
+        + (isDeletePending ? 'Confirm Delete' : 'Delete') + '</button>';
+      html += '</div>';
+      html += '<div class="category-body' + (isCollapsed ? ' collapsed' : '') + '">';
+
+      if (catDrills.length === 0) {
+        html += '<div class="library-empty">No drills in this category</div>';
+      } else {
+        catDrills.forEach(d => {
+          html += renderDrillCard(d, lib.activeDrillId);
+        });
+      }
+
+      html += '</div></div>';
+    });
+
+    // Uncategorized
+    if (uncategorized.length > 0 || allCats.length === 0) {
+      const isCollapsed = collapsedCategories['__uncategorized__'];
+      html += '<div class="category-section">';
+      html += '<div class="category-header" data-category="__uncategorized__">';
+      html += '<span class="category-collapse-icon' + (isCollapsed ? ' collapsed' : '') + '">&#9660;</span>';
+      html += '<span class="category-name">Uncategorized</span>';
+      html += '<span class="category-badge">' + uncategorized.length + '</span>';
+      html += '</div>';
+      html += '<div class="category-body' + (isCollapsed ? ' collapsed' : '') + '">';
+
+      if (uncategorized.length === 0) {
+        html += '<div class="library-empty">No uncategorized drills</div>';
+      } else {
+        uncategorized.forEach(d => {
+          html += renderDrillCard(d, lib.activeDrillId);
+        });
+      }
+
+      html += '</div></div>';
+    }
+
+    container.innerHTML = html;
+
+    // Attach event listeners
+    container.querySelectorAll('.category-header').forEach(hdr => {
+      hdr.addEventListener('click', function(e) {
+        // Don't toggle if clicking delete button or editing name
+        if (e.target.closest('.category-delete-btn') || e.target.closest('.category-name-input')) return;
+
+        // If clicking category name for rename
+        if (e.target.classList.contains('category-name') && e.target.dataset.catName) {
+          // Double click to edit
+          return;
+        }
+
+        const cat = hdr.dataset.category;
+        collapsedCategories[cat] = !collapsedCategories[cat];
+        renderLibrary();
+      });
+    });
+
+    // Category name inline editing (double-click)
+    container.querySelectorAll('.category-name[data-cat-name]').forEach(nameEl => {
+      nameEl.addEventListener('dblclick', function(e) {
+        e.stopPropagation();
+        const oldName = nameEl.dataset.catName;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'category-name-input';
+        input.value = oldName;
+        nameEl.replaceWith(input);
+        input.focus();
+        input.select();
+
+        function finishEdit() {
+          const newName = input.value.trim();
+          if (newName && newName !== oldName) {
+            renameCategory(oldName, newName);
+          } else {
+            renderLibrary();
+          }
+        }
+
+        input.addEventListener('blur', finishEdit);
+        input.addEventListener('keydown', function(ke) {
+          if (ke.key === 'Enter') {
+            ke.preventDefault();
+            input.blur();
+          }
+          if (ke.key === 'Escape') {
+            input.value = oldName;
+            input.blur();
+          }
+        });
+      });
+    });
+
+    // Category delete buttons
+    container.querySelectorAll('.category-delete-btn[data-delete-cat]').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        deleteCategory(btn.dataset.deleteCat);
+      });
+    });
+
+    // Drill card action buttons
+    container.querySelectorAll('[data-drill-open]').forEach(btn => {
+      btn.addEventListener('click', () => openDrill(btn.dataset.drillOpen));
+    });
+    container.querySelectorAll('[data-drill-dup]').forEach(btn => {
+      btn.addEventListener('click', () => duplicateDrill(btn.dataset.drillDup));
+    });
+    container.querySelectorAll('[data-drill-del]').forEach(btn => {
+      btn.addEventListener('click', () => deleteDrill(btn.dataset.drillDel));
+    });
+    container.querySelectorAll('[data-drill-export]').forEach(btn => {
+      btn.addEventListener('click', () => exportDrillJSON(btn.dataset.drillExport));
+    });
+  }
+
+  function renderDrillCard(drill, activeDrillId) {
+    const isActive = drill.id === activeDrillId;
+    const isDeletePending = deleteDrillPending[drill.id];
+    let html = '<div class="drill-card' + (isActive ? ' active-drill' : '') + '">';
+    html += '<div class="drill-card-info">';
+    html += '<div class="drill-card-title">' + escHtml(drill.title || 'Untitled Drill') + (isActive ? ' (active)' : '') + '</div>';
+    if (drill.description) {
+      html += '<div class="drill-card-desc">' + escHtml(drill.description) + '</div>';
+    }
+    html += '<div class="drill-card-meta">';
+    (drill.tags || []).forEach(t => {
+      html += '<span class="drill-card-tag">' + escHtml(t) + '</span>';
+    });
+    html += '<span class="drill-card-date">' + relativeTime(drill.modifiedAt) + '</span>';
+    html += '</div></div>';
+
+    html += '<div class="drill-card-actions">';
+    html += '<button class="open-action" data-drill-open="' + drill.id + '">Open</button>';
+    html += '<button data-drill-dup="' + drill.id + '">Duplicate</button>';
+    html += '<button data-drill-export="' + drill.id + '">Export</button>';
+    html += '<button class="danger-action" data-drill-del="' + drill.id + '">'
+      + (isDeletePending ? 'Confirm?' : 'Delete') + '</button>';
+    html += '</div></div>';
+    return html;
+  }
+
+  function escHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ==================== TAB NAVIGATION ====================
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    document.querySelectorAll('.tab-content').forEach(tc => {
+      tc.classList.toggle('active', tc.id === 'tab-' + tabName);
+    });
+    if (tabName === 'library') {
+      renderLibrary();
+    }
+    if (tabName === 'editor') {
+      // Trigger canvas resize in case the container changed
+      setTimeout(() => resizeCanvas(), 50);
+    }
+  }
+
+  function setupTabs() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+  }
+
+  // ==================== BREADCRUMB ====================
+  function updateBreadcrumb() {
+    const title = document.getElementById('drill-title').value || 'Untitled Drill';
+    document.getElementById('breadcrumb-title').textContent = title;
+  }
+
+  // ==================== TAGS ====================
+  let currentTags = [];
+
+  function renderTagChips() {
+    const container = document.getElementById('tag-chips');
+    let html = '';
+    currentTags.forEach(tag => {
+      html += '<span class="tag-chip">'
+        + escHtml(tag)
+        + '<button class="tag-remove" data-tag-remove="' + escHtml(tag) + '">&times;</button>'
+        + '</span>';
+    });
+    container.innerHTML = html;
+
+    container.querySelectorAll('.tag-remove').forEach(btn => {
+      btn.addEventListener('click', function() {
+        removeTag(btn.dataset.tagRemove);
+      });
+    });
+  }
+
+  function addTag(tagName) {
+    tagName = tagName.trim();
+    if (!tagName || currentTags.includes(tagName)) return;
+    currentTags.push(tagName);
+
+    // Auto-create category if not existing
+    const lib = loadLibrary();
+    if (!lib.categories.includes(tagName)) {
+      lib.categories.push(tagName);
+      saveLibrary(lib);
+    }
+
+    renderTagChips();
+    updateTagSuggestions();
+    autoSave();
+  }
+
+  function removeTag(tagName) {
+    currentTags = currentTags.filter(t => t !== tagName);
+    renderTagChips();
+    autoSave();
+  }
+
+  function updateTagSuggestions() {
+    const lib = loadLibrary();
+    const datalist = document.getElementById('tag-suggestions');
+    datalist.innerHTML = '';
+    (lib.categories || []).forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      datalist.appendChild(opt);
+    });
+  }
+
+  function setupTagInput() {
+    const input = document.getElementById('tag-add-input');
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addTag(input.value);
+        input.value = '';
+      }
+    });
+  }
 
   // ==================== STATE ====================
   let canvas;
@@ -452,8 +1537,34 @@ body {
     setupActions();
     setupKeyboard();
     setupCanvasInteractions();
-    restoreFromStorage();
+    setupTabs();
+    setupTagInput();
+    setupLibraryActions();
+
+    // Load library and restore active drill
+    restoreFromLibrary();
+
     saveHistoryState();
+  }
+
+  function restoreFromLibrary() {
+    const lib = loadLibrary();
+    const drill = getActiveDrill(lib);
+    if (drill) {
+      document.getElementById('drill-title').value = drill.title || '';
+      document.getElementById('drill-description').value = drill.description || '';
+      CONFIG.BACKGROUND_URL = drill.backgroundUrl || null;
+      currentTags = [...(drill.tags || [])];
+      renderTagChips();
+      updateTagSuggestions();
+
+      if (drill.items && drill.items.length > 0) {
+        suppressHistory = true;
+        renderDrill(drill.items);
+        suppressHistory = false;
+      }
+    }
+    updateBreadcrumb();
   }
 
   // ==================== CANVAS SETUP ====================
@@ -1217,7 +2328,7 @@ body {
       if (!resetPending) {
         // First click — ask for confirmation by changing button text
         resetPending = true;
-        resetBtn.textContent = '⚠ Confirm?';
+        resetBtn.textContent = '\u26a0 Confirm?';
         resetBtn.classList.add('danger');
         // Auto-cancel after 3 seconds
         setTimeout(() => {
@@ -1236,6 +2347,14 @@ body {
       }
     });
 
+    // New Drill button
+    document.getElementById('btn-new-drill').addEventListener('click', () => {
+      // Save current drill first
+      autoSave();
+      const drill = createNewDrill();
+      openDrill(drill.id);
+    });
+
     document.getElementById('btn-save-json').addEventListener('click', exportJSON);
     document.getElementById('btn-load-json').addEventListener('click', () => {
       document.getElementById('file-json').click();
@@ -1250,8 +2369,40 @@ body {
     document.getElementById('file-bg').addEventListener('change', uploadBackground);
 
     // Auto-save on title/description change
-    document.getElementById('drill-title').addEventListener('input', autoSave);
+    document.getElementById('drill-title').addEventListener('input', () => {
+      autoSave();
+      updateBreadcrumb();
+    });
     document.getElementById('drill-description').addEventListener('input', autoSave);
+  }
+
+  function setupLibraryActions() {
+    document.getElementById('library-search').addEventListener('input', renderLibrary);
+
+    document.getElementById('btn-new-category').addEventListener('click', () => {
+      const name = prompt('New category name:');
+      if (!name || !name.trim()) return;
+      const lib = loadLibrary();
+      if (!lib.categories.includes(name.trim())) {
+        lib.categories.push(name.trim());
+        saveLibrary(lib);
+      }
+      updateTagSuggestions();
+      renderLibrary();
+    });
+
+    document.getElementById('btn-export-library').addEventListener('click', exportLibraryJSON);
+
+    document.getElementById('btn-import-library').addEventListener('click', () => {
+      document.getElementById('file-library-import').click();
+    });
+
+    document.getElementById('file-library-import').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      importLibraryJSON(file);
+      e.target.value = '';
+    });
   }
 
   function resetCanvas() {
@@ -1265,6 +2416,7 @@ body {
 
   // ==================== EXPORT / IMPORT ====================
   function exportJSON() {
+    // Export active drill in v2 format for compatibility
     const state = {
       version: 2,
       title: document.getElementById('drill-title').value,
@@ -1289,15 +2441,39 @@ body {
     reader.onload = function(ev) {
       try {
         const state = JSON.parse(ev.target.result);
-        document.getElementById('drill-title').value = state.title || '';
-        document.getElementById('drill-description').value = state.description || '';
-        CONFIG.BACKGROUND_URL = state.backgroundUrl || null;
+
+        // Add imported drill to library
+        const lib = loadLibrary();
+        const drillId = generateId();
+        const now = new Date().toISOString();
+        const drill = {
+          id: drillId,
+          title: state.title || '',
+          description: state.description || '',
+          tags: [],
+          backgroundUrl: state.backgroundUrl || null,
+          items: state.items || [],
+          createdAt: now,
+          modifiedAt: now
+        };
+        lib.drills.push(drill);
+        lib.activeDrillId = drillId;
+        saveLibrary(lib);
+
+        // Load into editor
+        document.getElementById('drill-title').value = drill.title;
+        document.getElementById('drill-description').value = drill.description;
+        CONFIG.BACKGROUND_URL = drill.backgroundUrl;
+        currentTags = [];
+        renderTagChips();
 
         suppressHistory = true;
-        renderDrill(state.items || []);
+        renderDrill(drill.items);
         suppressHistory = false;
+        history = [];
+        historyIndex = -1;
         saveHistoryState();
-        autoSave();
+        updateBreadcrumb();
       } catch (err) {
         alert('Failed to load JSON: ' + err.message);
       }
@@ -1383,37 +2559,23 @@ body {
     e.target.value = '';
   }
 
-  // ==================== PERSISTENCE ====================
+  // ==================== PERSISTENCE (LIBRARY-AWARE) ====================
   function autoSave() {
     try {
-      const state = {
-        version: 2,
-        title: document.getElementById('drill-title').value,
-        description: document.getElementById('drill-description').value,
-        backgroundUrl: CONFIG.BACKGROUND_URL,
-        items: serializeDrill()
-      };
-      localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(state));
+      const lib = loadLibrary();
+      const drill = getActiveDrill(lib);
+      if (!drill) return;
+
+      drill.title = document.getElementById('drill-title').value;
+      drill.description = document.getElementById('drill-description').value;
+      drill.tags = [...currentTags];
+      drill.backgroundUrl = CONFIG.BACKGROUND_URL;
+      drill.items = serializeDrill();
+      drill.modifiedAt = new Date().toISOString();
+
+      saveLibrary(lib);
     } catch (e) {
       // Storage full or unavailable — silently fail
-    }
-  }
-
-  function restoreFromStorage() {
-    try {
-      const raw = localStorage.getItem(CONFIG.STORAGE_KEY);
-      if (!raw) return;
-
-      const state = JSON.parse(raw);
-      document.getElementById('drill-title').value = state.title || '';
-      document.getElementById('drill-description').value = state.description || '';
-      CONFIG.BACKGROUND_URL = state.backgroundUrl || null;
-
-      suppressHistory = true;
-      renderDrill(state.items || []);
-      suppressHistory = false;
-    } catch (e) {
-      // Corrupted storage — start fresh
     }
   }
 
