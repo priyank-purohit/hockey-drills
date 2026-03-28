@@ -1,4 +1,4 @@
-# Hockey Drill Maker — Build Spec & Prompt
+# Hockey Drill Maker — Build Spec
 
 ## Build Instructions
 
@@ -6,23 +6,29 @@ Build a fully functional ice hockey drill drawing tool as a **single self-contai
 
 The tool should allow coaches to place hockey objects (players, pucks, nets, and cones), draw lines representing skating/passing/shooting, and export the result as JSON or PDF.
 
+Hosted on GitHub Pages: **https://priyank-purohit.github.io/hockey-drills/**
+
 ---
 
 ## UI Layout
 
-### Canvas / Rink Sizing `[CONFIGURE]`
+### Canvas / Rink Sizing
 
-- Canvas logical size: **200 x 85 px** (ratio) — scale to fit available width
-- Above the canvas is a row of tools
+- Canvas logical size: **200 x 85 px** (ratio) — scales to fit available width
+- Canvas includes 3px padding around the rink to prevent border clipping
+- In landscape mobile, canvas height-constrains to fit the viewport
+- App has 5% horizontal padding on each side for mobile touch scrolling
+- Above the canvas is a toolbar row
 
-### Overall Layout `[CONFIGURE]`
+### Overall Layout
 
-- **Top Bar:** All tools and objects in a horizontal bar above the canvas
+- **Top Bar:** All tools and objects in a horizontal bar above the canvas (wraps on mobile)
+- MUI-style design with system-preference dark/light theming
 
-### Drill Name & Description `[CONFIGURE]`
+### Drill Name & Description
 
-- [ ] **Title** — text field at the very top of the top bar
-- [ ] **Description** — text field below the title
+- [x] **Title** — text field at the very top of the top bar
+- [x] **Description** — text field below the title
 
 ### Tool Palette
 
@@ -30,25 +36,27 @@ In the top bar, coaches can pick a tool or object, and a colour override.
 
 #### Lines
 
-- [ ] **Skating line** — straight line with 1 arrow. Default colour: black
-- [ ] **Skating with puck line** — squiggly line with 1 arrow (same click-to-start, click-to-end mechanic as straight lines — rendered as a sine-wave/zigzag shape instead of a straight stroke). Default colour: black
-- [ ] **Passing line** — dashed line with 1 arrow. Default colour: black
-- [ ] **Shooting line** — longer dashed line with 1 arrow. Default colour: black
+- [x] **Skating line** — straight line with 1 arrow. Default colour: black
+- [x] **Skating with puck line** — squiggly line with 1 arrow (same click-to-start, click-to-end mechanic as straight lines — rendered as a sine-wave/zigzag shape). Default colour: black
+- [x] **Passing line** — short dashed line with 1 arrow. Default colour: black
+- [x] **Shooting line** — longer dashed line with 1 arrow. Default colour: black
+
+All lines are straight only (no curved/bezier paths). Lines end at the arrow base (no overlap between line stroke and arrowhead).
 
 #### Players
 
-- [ ] **Forwards** — circle with label `F#` in the center, where `#` is an auto-incrementing index starting at 1 (F1, F2, F3…). Default colour: red
-- [ ] **Defensemen** — circle with label `D#` in the center, where `#` is an auto-incrementing index starting at 1 (D1, D2, D3…). Default colour: red
-- [ ] **Goalies** — circle with label `G#` in the center, where `#` is an auto-incrementing index starting at 1 (G1, G2…). Default colour: red
+- [x] **Forwards** — circle with label `F#` in the center (stroke: 0.6x base). Default colour: red
+- [x] **Defensemen** — circle with label `D#` in the center (stroke: 0.8x base). Default colour: red
+- [x] **Goalies** — circle with label `G#` in the center (stroke: 1.0x base). Default colour: red
 
-> **Indexing rules:** Deleting a player does NOT re-index existing players. The next player added fills the lowest available index (e.g., if F1 and F3 exist and F2 was deleted, the next forward is F2). Objects cannot be edited or moved after placement — delete and re-add instead.
+> **Indexing rules:** Index auto-increments starting at 1. Deleting a player does NOT re-index existing players. The next player added fills the lowest available index (e.g., if F1 and F3 exist and F2 was deleted, the next forward is F2). Objects cannot be edited or moved after placement — delete and re-add instead.
 
 #### Equipment
 
-- [ ] **Hockey net** — simple rectangle outline (1/3 the thickness of the rink border) with grey fill. Bigger than player circles. Default colour: red
-- [ ] **Pylon** — bright orange equilateral triangle. Default colour: orange
-- [ ] **Single puck** — small black circle. Default colour: black
-- [ ] **Multiple pucks** — group of 5 small black circles. Default colour: black
+- [x] **Hockey net** — rectangle outline (1/3 rink border thickness) with grey fill and cross-hatch lines. Oriented tall (height > width). Default colour: red
+- [x] **Pylon** — bright orange equilateral triangle. Default colour: orange
+- [x] **Single puck** — small black circle. Default colour: black
+- [x] **Multiple pucks** — group of 5 small black circles in pyramid layout (3 bottom, 2 top) with 2-3px spacing. Default colour: black
 
 #### Object Sizing
 
@@ -62,27 +70,28 @@ All sizes are proportional to the 200:85 rink ratio, relative to the hockey net:
 
 #### Colours
 
-- [ ] Available colours: red, blue, green, yellow, orange, black, purple, teal
+- [x] Available colours: red, blue, green, yellow, orange, black, purple, teal
 
 All tools have a default colour (stored as a constant for easy customization). Coaches can override the colour before placing an object/tool/line on the rink.
 
 ### Actions & Shortcuts
 
-- [ ] **Reset button** in the top bar — clears all objects and lines from the canvas. Shows a confirmation dialog before clearing. Deleting individual objects/lines does NOT require confirmation (coaches can use undo/redo).
-- [ ] **ESC key** deselects all tools (returns to idle/no-tool-selected state)
+- [x] **Reset button** in the top bar — clears all objects and lines from the canvas. Uses double-tap confirmation (first tap shows "⚠ Confirm?", second tap within 3 seconds executes reset, auto-cancels otherwise). No confirmation for individual object/line deletes (coaches use undo/redo).
+- [x] **ESC key** deselects all tools (returns to idle/no-tool-selected state)
 
 ---
 
 ## Responsive Strategy & Touch Interactions
 
-- [ ] **Fully responsive** — works on phones (320px+), tablets, and desktop
-- [ ] On mobile (320px+), the top bar tool palette wraps to multiple lines. The rink is 320px wide, leaving plenty of vertical screen real estate for the multi-line toolbar above it.
-- [ ] Touch/click to start a line, touch/click again to end
-- [ ] Tap/click to place objects
-- [ ] Long-press to delete objects (double-click on desktop)
-- [ ] No zoom in/out needed
-- [ ] Canvas auto-scales to fit available space (maintaining 200:85 aspect ratio)
-- [ ] All lines are straight only (no curved/bezier paths)
+- [x] **Fully responsive** — works on phones (320px+), tablets, and desktop
+- [x] On mobile (320px+), the top bar tool palette wraps to multiple lines
+- [x] In landscape mobile, canvas constrains to available viewport height so toolbar + rink fit without scrolling
+- [x] 5% horizontal padding on each side for mobile touch scrolling
+- [x] Touch/click to start a line, touch/click again to end
+- [x] Tap/click to place objects
+- [x] Long-press to delete objects (double-click on desktop)
+- [x] No zoom in/out needed
+- [x] Canvas auto-scales to fit available space (maintaining 200:85 aspect ratio)
 
 ---
 
@@ -90,31 +99,56 @@ All tools have a default colour (stored as a constant for easy customization). C
 
 ### Background Image
 
-- Background image sits at the **lowest z-index** (below all objects and lines)
-- A URL to the background image will be provided (configurable)
-- Background image URL persists in JSON export/import
-- Allow user to upload a replacement background image
+- [x] Background image sits at the **lowest z-index** (below all objects and lines)
+- [x] A URL to the background image can be configured (`CONFIG.BACKGROUND_URL`)
+- [x] Background image URL persists in JSON export/import
+- [x] User can upload a replacement background image via toolbar button
 
 ### Default Rink (programmatically drawn, used when no image URL provided)
 
-- Thick black border around the full rink (rounded corners for rink shape)
+- Thick black border around the full rink (rounded corners, 3px canvas padding to prevent clipping)
 - Center red line (vertical, splitting rink in half)
-- Two blue lines (vertical, evenly spaced between center and each end)
-- White/ice-colored fill background
+- Two blue lines (vertical, at 1/3 and 2/3)
+- Center circle and center dot (blue)
+- White/ice-colored fill background (`#f0f4f8`)
 
 ### Z-Order
 
-- [ ] Objects render above rink background but below UI
-- [ ] No line snapping to objects — lines are free-floating
+- [x] Rink background elements are non-selectable and non-interactive
+- [x] Objects render above rink background but below UI
+- [x] No line snapping to objects — lines are free-floating
 
 ---
 
 ## Undo / Redo
 
-- [ ] Full canvas state snapshot on each action
-- [ ] Configurable history depth (default: 50 states)
-- [ ] Undo/redo buttons in UI
-- [ ] Keyboard shortcut support (`Cmd/Ctrl+Z` and `Cmd/Ctrl+Y`)
+- [x] Semantic state snapshot on each action (stores drill data, not Fabric.js objects)
+- [x] Configurable history depth (default: 50 states)
+- [x] Undo/redo buttons in UI
+- [x] Keyboard shortcut support (`Cmd/Ctrl+Z` and `Cmd/Ctrl+Y` / `Cmd/Ctrl+Shift+Z`)
+
+---
+
+## Semantic Serialization
+
+All persistence uses **semantic data** — only the type, position, colour, and metadata of each drill element is stored. Rendering is always done by current code. This means:
+
+- Updating line styles, object appearance, or sizing in the code automatically applies to all saved drills on next load
+- Positions stored in logical coordinates (0–200 x 0–85), independent of screen size
+- JSON format (version 2):
+
+```json
+{
+  "version": 2,
+  "title": "...",
+  "description": "...",
+  "backgroundUrl": null,
+  "items": [
+    { "kind": "line", "lineType": "skate", "startX": 10, "startY": 42, "endX": 190, "endY": 42, "colour": "#212121" },
+    { "kind": "object", "objectType": "forward", "x": 30, "y": 42, "colour": "#d32f2f", "index": 1 }
+  ]
+}
+```
 
 ---
 
@@ -122,46 +156,45 @@ All tools have a default colour (stored as a constant for easy customization). C
 
 ### Export
 
-- [ ] **PDF export** — canvas image + drill name + footer text, auto-downloads
-- [ ] **JSON export** — save canvas state as JSON for reload later
+- [x] **PDF export** — canvas image + drill name + footer text, auto-downloads. Landscape A4 orientation matching rink aspect ratio.
+- [x] **JSON export** — save semantic drill state as JSON for reload later
 
 ### Import
 
-- [ ] **JSON import** — load previously saved JSON state
+- [x] **JSON import** — load previously saved JSON state, re-rendered with current styles
 
 ### PDF Options
 
-- [ ] Include drill name/description text
-- [ ] Include watermark/footer text (configurable — text content stored as a constant/config option)
-- [ ] Landscape orientation matching rink aspect ratio
+- [x] Include drill name/description text
+- [x] Include watermark/footer text (configurable via `CONFIG.PDF_WATERMARK`)
+- [x] Landscape orientation matching rink aspect ratio
 
 ---
 
 ## Persistence
 
-- [ ] **LocalStorage auto-save** — canvas state saved to browser, restored on reload
-- [ ] **Manual save/load** — JSON export/import buttons
+- [x] **LocalStorage auto-save** — semantic drill state saved to browser on every action, restored on reload
+- [x] **Manual save/load** — JSON export/import buttons
 
 ---
 
 ## Typography
 
-Use a clean, modern sans-serif font stack suitable for a sports/coaching tool:
+Font stack:
 
 ```
 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif
 ```
 
-- Player labels (F1, D2, etc.) should be **bold** and sized to fit legibly inside their circles
-- Title and description fields should use a slightly larger weight/size to stand out from the toolbar
+- Player labels (F1, D2, etc.) are **bold** and sized to fit legibly inside their circles
+- Title and description fields use a slightly larger weight/size to stand out from the toolbar
 
 ---
 
-## Theming / Visual Style `[CONFIGURE]`
+## Theming / Visual Style
 
-- [ ] Dark theme (dark backgrounds, light text)
-- [ ] Light theme (white/light grey backgrounds)
-- [ ] System preference (follow OS dark/light mode)
+- [x] System preference (follows OS dark/light mode via `prefers-color-scheme`)
+- CSS variables for all theme tokens (background, surface, text, borders, etc.)
 
 ---
 
