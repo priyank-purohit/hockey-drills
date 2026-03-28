@@ -219,10 +219,8 @@ body {
   box-shadow: var(--shadow);
   overflow: hidden;
   position: relative;
-}
-
-.canvas-container-wrapper canvas {
-  display: block;
+  display: flex;
+  justify-content: center;
 }
 
 /* ========== Status Bar ========== */
@@ -446,10 +444,23 @@ body {
   }
 
   // ==================== CANVAS SETUP ====================
-  function setupCanvas() {
+  function calcCanvasSize() {
     const wrapper = document.getElementById('canvas-wrapper');
     const availableWidth = wrapper.clientWidth;
-    scaleFactor = availableWidth / CONFIG.RINK_W;
+
+    // Constrain by available height: viewport minus space above canvas (toolbar, title, etc.)
+    const wrapperTop = wrapper.getBoundingClientRect().top;
+    const availableHeight = window.innerHeight - wrapperTop - 40; // 40px for status bar + padding
+    const maxWidthFromHeight = availableHeight * (CONFIG.RINK_W / CONFIG.RINK_H);
+
+    // Use the smaller of the two to ensure canvas fits both dimensions
+    const effectiveWidth = Math.min(availableWidth, maxWidthFromHeight);
+    return Math.max(effectiveWidth, 200); // minimum 200px wide
+  }
+
+  function setupCanvas() {
+    const effectiveWidth = calcCanvasSize();
+    scaleFactor = effectiveWidth / CONFIG.RINK_W;
     const w = Math.floor(CONFIG.RINK_W * scaleFactor);
     const h = Math.floor(CONFIG.RINK_H * scaleFactor);
 
@@ -472,9 +483,8 @@ body {
   }
 
   function resizeCanvas() {
-    const wrapper = document.getElementById('canvas-wrapper');
-    const availableWidth = wrapper.clientWidth;
-    scaleFactor = availableWidth / CONFIG.RINK_W;
+    const effectiveWidth = calcCanvasSize();
+    scaleFactor = effectiveWidth / CONFIG.RINK_W;
 
     const w = Math.floor(CONFIG.RINK_W * scaleFactor);
     const h = Math.floor(CONFIG.RINK_H * scaleFactor);
