@@ -251,10 +251,22 @@ body {
 }
 
 /* ========== Responsive ========== */
+
+/* Tablet (601–1024px) */
+@media (min-width: 601px) and (max-width: 1024px) {
+  .tool-btn { padding: 8px 14px; font-size: 13px; }
+  .action-btn { padding: 8px 12px; font-size: 13px; }
+  .colour-swatch { width: 32px; height: 32px; }
+  .toolbar-section { gap: 8px; }
+}
+
+/* Phone (≤600px) */
 @media (max-width: 600px) {
-  #app { padding: 8px; }
-  .tool-btn { padding: 5px 8px; font-size: 11px; }
-  .colour-swatch { width: 22px; height: 22px; }
+  #app { padding: 8px 5%; }
+  .tool-btn { padding: 7px 10px; font-size: 12px; }
+  .action-btn { padding: 7px 10px; font-size: 12px; }
+  .colour-swatch { width: 28px; height: 28px; }
+  .toolbar-section { gap: 6px; }
   .drill-header input#drill-title { font-size: 16px; }
 }
 </style>
@@ -429,7 +441,7 @@ body {
   // Long-press tracking
   let longPressTimer = null;
   let longPressTarget = null;
-  const LONG_PRESS_MS = 600;
+  const LONG_PRESS_MS = 500;
 
   // ==================== INIT ====================
   function init() {
