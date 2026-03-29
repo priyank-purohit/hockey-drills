@@ -963,8 +963,6 @@ html[data-theme="dark"] {
     <!-- Toolbar -->
     <div class="toolbar">
       <div class="toolbar-section">
-        <button class="tool-btn" data-tool="move" title="Select &amp; move objects">&#9995; Move</button>
-        <div class="toolbar-divider"></div>
         <span class="toolbar-label">Lines</span>
         <button class="tool-btn" data-tool="skate" title="Skating line">&#8594; Skate</button>
         <button class="tool-btn" data-tool="puck" title="Puck carry">&#12336; Puck</button>
@@ -980,25 +978,35 @@ html[data-theme="dark"] {
         <button class="tool-btn" data-tool="net" title="Net">&#9632; Net</button>
         <button class="tool-btn" data-tool="pylon" title="Pylon">&#9650; Pylon</button>
         <button class="tool-btn" data-tool="puck1" title="Puck">&#9679; Puck</button>
-        <button class="tool-btn" data-tool="puck5" title="5 pucks">&#9679;&#215;5</button>
+        <button class="tool-btn" data-tool="puck5" title="3 pucks">&#9679;&#215;3</button>
         <div class="toolbar-divider"></div>
         <span class="toolbar-label">Annotate</span>
         <button class="tool-btn" data-tool="text" title="Text label">A Text</button>
         <button class="tool-btn" data-tool="freehand" title="Freehand draw">&#9998; Draw</button>
         <div class="toolbar-divider"></div>
-        <div class="colour-swatch" data-colour="#d32f2f" style="background:#d32f2f" title="Red"></div>
-        <div class="colour-swatch" data-colour="#1976d2" style="background:#1976d2" title="Blue"></div>
-        <div class="colour-swatch" data-colour="#388e3c" style="background:#388e3c" title="Green"></div>
-        <div class="colour-swatch" data-colour="#fbc02d" style="background:#fbc02d" title="Yellow"></div>
-        <div class="colour-swatch" data-colour="#f57c00" style="background:#f57c00" title="Orange"></div>
-        <div class="colour-swatch" data-colour="#212121" style="background:#212121" title="Black"></div>
-        <div class="colour-swatch" data-colour="#7b1fa2" style="background:#7b1fa2" title="Purple"></div>
-        <div class="colour-swatch" data-colour="#00897b" style="background:#00897b" title="Teal"></div>
+        <div style="position:relative;display:inline-flex;">
+          <button class="action-btn" id="colour-picker-btn" title="Choose colour" style="padding:4px 8px;">
+            <span id="colour-indicator" style="display:inline-block;width:16px;height:16px;border-radius:50%;background:#212121;border:1px solid var(--border);vertical-align:middle;"></span>
+          </button>
+          <div id="colour-dropdown" style="display:none;position:absolute;top:100%;left:0;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:6px;box-shadow:var(--shadow-lg);">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
+              <div class="colour-swatch" data-colour="#d32f2f" style="background:#d32f2f" title="Red"></div>
+              <div class="colour-swatch" data-colour="#1976d2" style="background:#1976d2" title="Blue"></div>
+              <div class="colour-swatch" data-colour="#388e3c" style="background:#388e3c" title="Green"></div>
+              <div class="colour-swatch" data-colour="#fbc02d" style="background:#fbc02d" title="Yellow"></div>
+              <div class="colour-swatch" data-colour="#f57c00" style="background:#f57c00" title="Orange"></div>
+              <div class="colour-swatch" data-colour="#212121" style="background:#212121" title="Black"></div>
+              <div class="colour-swatch" data-colour="#7b1fa2" style="background:#7b1fa2" title="Purple"></div>
+              <div class="colour-swatch" data-colour="#00897b" style="background:#00897b" title="Teal"></div>
+            </div>
+          </div>
+        </div>
         <select id="line-thickness" class="action-btn" style="padding:4px 6px;">
           <option value="thin">Thin</option>
           <option value="medium" selected>Medium</option>
           <option value="thick">Thick</option>
         </select>
+        <button class="tool-btn" data-tool="move" title="Select &amp; move objects">&#9995; Move</button>
       </div>
 
       <!-- Row 2: View cycle + Play controls + Right-aligned actions -->
@@ -1061,11 +1069,14 @@ html[data-theme="dark"] {
 
     <div class="toolbar" style="margin-top:8px;margin-bottom:0;">
       <div class="toolbar-section" style="margin-bottom:0;">
-        <button class="action-btn" id="btn-save-json" title="Save JSON">&#128190; Save</button>
+        <button class="action-btn" id="btn-save-json" title="Save to browser">&#128190; Save</button>
         <button class="action-btn" id="btn-load-json" title="Load JSON">&#128194; Load</button>
-        <button class="action-btn" id="btn-export-pdf" title="Export PDF">&#128196; PDF</button>
         <button class="action-btn" id="btn-share" title="Share">&#128279; Share</button>
+        <div class="toolbar-divider"></div>
+        <button class="action-btn" id="btn-export-json" title="Export JSON">{ } JSON</button>
         <button class="action-btn" id="btn-export-png" title="Export PNG">&#128444; PNG</button>
+        <button class="action-btn" id="btn-export-pdf" title="Export PDF">&#128196; PDF</button>
+        <div class="toolbar-divider"></div>
         <button class="action-btn" id="btn-upload-bg" title="Background URL">&#128247; BG</button>
         <button id="btn-theme" class="action-btn" title="Toggle theme">&#127763; System</button>
         <input type="file" id="file-json" accept=".json,application/json" style="display:none" />
@@ -3278,7 +3289,7 @@ html[data-theme="dark"] {
       const h = canvas.height;
       container.style.transform = 'rotate(90deg)';
       container.style.transformOrigin = 'top left';
-      container.style.marginLeft = h + 'px';
+      container.style.marginLeft = ((wrapper.clientWidth + h) / 2) + 'px';
       // Set wrapper height to match the rotated canvas width
       wrapper.style.height = w + 'px';
       wrapper.style.minHeight = w + 'px';
@@ -3545,12 +3556,30 @@ html[data-theme="dark"] {
 
   // ==================== COLOUR PICKER ====================
   function setupColourPicker() {
+    // Toggle dropdown on button click
+    document.getElementById('colour-picker-btn').addEventListener('click', function(e) {
+      e.stopPropagation();
+      var dd = document.getElementById('colour-dropdown');
+      dd.style.display = dd.style.display === 'grid' ? 'none' : 'grid';
+    });
+    // Close dropdown on outside click
+    document.addEventListener('click', function() {
+      document.getElementById('colour-dropdown').style.display = 'none';
+    });
+    // Prevent dropdown clicks from closing itself
+    document.getElementById('colour-dropdown').addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+
     document.querySelectorAll('.colour-swatch').forEach(swatch => {
       swatch.addEventListener('click', () => {
         if (!activeTool) return; // Don't allow colour selection without an active tool
         activeColour = swatch.dataset.colour;
         document.querySelectorAll('.colour-swatch').forEach(s => s.classList.remove('active'));
         swatch.classList.add('active');
+        // Update indicator and close dropdown
+        document.getElementById('colour-indicator').style.background = swatch.dataset.colour;
+        document.getElementById('colour-dropdown').style.display = 'none';
         // Update freehand brush colour in real time
         if (activeTool === 'freehand' && canvas.isDrawingMode) {
           canvas.freeDrawingBrush.color = activeColour;
@@ -3577,6 +3606,8 @@ html[data-theme="dark"] {
     document.querySelectorAll('.colour-swatch').forEach(s => {
       s.classList.toggle('active', s.dataset.colour === colour);
     });
+    var indicator = document.getElementById('colour-indicator');
+    if (indicator && colour) indicator.style.background = colour;
   }
 
   // ==================== CANVAS INTERACTIONS ====================
@@ -4055,7 +4086,7 @@ html[data-theme="dark"] {
     const swMap = { G: 1, D: 0.8, F: 0.6 };
     const circle = new fabric.Circle({
       radius: r,
-      fill: 'transparent',
+      fill: 'rgba(255,255,255,0.85)',
       stroke: colour,
       strokeWidth: (swMap[letter] || 1) * s,
       originX: 'center', originY: 'center'
@@ -4086,23 +4117,27 @@ html[data-theme="dark"] {
 
     const rect = new fabric.Rect({
       width: w, height: h,
-      fill: '#cccccc',
+      fill: '#e0e0e0',
       stroke: colour,
       strokeWidth: borderThickness,
+      rx: 1 * s, ry: 1 * s,
       originX: 'center', originY: 'center'
     });
 
-    // Cross-hatch lines for net appearance
-    const line1 = new fabric.Line([-w/2, -h/2, w/2, h/2], {
-      stroke: colour, strokeWidth: 0.5 * s, originX: 'center', originY: 'center',
-      selectable: false, evented: false
-    });
-    const line2 = new fabric.Line([w/2, -h/2, -w/2, h/2], {
-      stroke: colour, strokeWidth: 0.5 * s, originX: 'center', originY: 'center',
-      selectable: false, evented: false
-    });
+    // Mesh grid lines for net appearance
+    const meshLines = [];
+    for (var mi = 1; mi <= 2; mi++) {
+      // Horizontal mesh lines
+      meshLines.push(new fabric.Line([-w/2, -h/2 + (h/3)*mi, w/2, -h/2 + (h/3)*mi], {
+        stroke: colour, strokeWidth: 0.3 * s, selectable: false, evented: false
+      }));
+      // Vertical mesh lines
+      meshLines.push(new fabric.Line([-w/2 + (w/3)*mi, -h/2, -w/2 + (w/3)*mi, h/2], {
+        stroke: colour, strokeWidth: 0.3 * s, selectable: false, evented: false
+      }));
+    }
 
-    const group = new fabric.Group([rect, line1, line2], {
+    const group = new fabric.Group([rect].concat(meshLines), {
       left: pos.x, top: pos.y,
       originX: 'center', originY: 'center',
       selectable: false, evented: true,
@@ -4158,13 +4193,11 @@ html[data-theme="dark"] {
 
     const circles = [];
 
-    // Pyramid/triangle: 3 on bottom, 2 on top
+    // Triangle: 2 on bottom, 1 on top (3 pucks)
     const offsets = [
-      { x: -g, y: g * 0.5 },
-      { x: 0, y: g * 0.5 },
-      { x: g, y: g * 0.5 },
-      { x: -g * 0.5, y: -g * 0.5 },
-      { x: g * 0.5, y: -g * 0.5 }
+      { x: -g * 0.5, y: g * 0.4 },
+      { x: g * 0.5, y: g * 0.4 },
+      { x: 0, y: -g * 0.4 }
     ];
 
     offsets.forEach(off => {
@@ -4730,7 +4763,15 @@ html[data-theme="dark"] {
       openDrill(drill.id);
     });
 
-    confirmAction('btn-save-json', exportJSON);
+    document.getElementById('btn-save-json').addEventListener('click', function() {
+      autoSave();
+      var btn = this;
+      var orig = btn.innerHTML;
+      btn.innerHTML = '\u2713 Saved';
+      btn.style.color = '#388e3c';
+      setTimeout(function() { btn.innerHTML = orig; btn.style.color = ''; }, 1500);
+    });
+    confirmAction('btn-export-json', exportJSON);
     document.getElementById('btn-load-json').addEventListener('click', () => {
       document.getElementById('file-json').click();
     });
@@ -5244,7 +5285,7 @@ html[data-theme="dark"] {
       var playerDot = new fabric.Circle({
         left: startPx.x, top: startPx.y,
         radius: 4 * s, fill: 'transparent',
-        stroke: line.colour, strokeWidth: 1.5 * s,
+        stroke: '#d32f2f', strokeWidth: 1.5 * s,
         originX: 'center', originY: 'center',
         selectable: false, evented: false
       });
@@ -5287,8 +5328,8 @@ html[data-theme="dark"] {
           playerDot.set({ left: curPos.x, top: curPos.y });
           ghostLine.set({ x2: curPos.x, y2: curPos.y });
           if (puckDot) {
-            var trailPos = interpPath(Math.max(0, eased - 0.05));
-            puckDot.set({ left: trailPos.x, top: trailPos.y });
+            var leadPos = interpPath(Math.min(1, eased + 0.05));
+            puckDot.set({ left: leadPos.x, top: leadPos.y });
           }
         } else {
           playerDot.set({ left: startPx.x, top: startPx.y });
