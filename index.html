@@ -5111,7 +5111,7 @@ html[data-theme="dark"] {
   function updateLastUpdated() {
     const el = document.getElementById('last-updated');
     if (!el) return;
-    el.textContent = 'Mar 29, 2026, 09:48 AM'; // AUTO_TIMESTAMP
+    el.textContent = 'Mar 29, 2026, 01:55 PM'; // AUTO_TIMESTAMP
   }
 
   // ==================== PERSISTENCE (LIBRARY-AWARE) ====================
@@ -5329,18 +5329,35 @@ html[data-theme="dark"] {
         canvas.add(puckDot);
       }
 
-      // Ghost trail — for multi-segment, we just show a simple fading line from start to current
-      var ghostLine = new fabric.Line([startPx.x, startPx.y, startPx.x, startPx.y], {
-        stroke: line.colour, strokeWidth: 1.5 * s, opacity: 0.15,
-        selectable: false, evented: false
-      });
-      canvas.add(ghostLine);
+      // Ghost trail — traces the actual path from start to current position
+      var ghostLine = null;
+      var ghostPathStr = '';
+
+      function buildGhostPath(toT) {
+        // Build SVG path string from start through waypoints up to position at t
+        var pathStr = 'M ' + pixPts[0].x + ' ' + pixPts[0].y;
+        if (totalLen === 0) return pathStr;
+        var dist = toT * totalLen;
+        var accum = 0;
+        for (var gi = 0; gi < segLengths.length; gi++) {
+          if (accum + segLengths[gi] >= dist) {
+            var gSegT = (dist - accum) / segLengths[gi];
+            var gx = pixPts[gi].x + (pixPts[gi+1].x - pixPts[gi].x) * gSegT;
+            var gy = pixPts[gi].y + (pixPts[gi+1].y - pixPts[gi].y) * gSegT;
+            pathStr += ' L ' + gx + ' ' + gy;
+            break;
+          }
+          pathStr += ' L ' + pixPts[gi+1].x + ' ' + pixPts[gi+1].y;
+          accum += segLengths[gi];
+        }
+        return pathStr;
+      }
 
       var startTime = Date.now();
 
       function frame() {
         if (!isAnimating) {
-          canvas.remove(playerDot); if (puckDot) canvas.remove(puckDot); canvas.remove(ghostLine);
+          canvas.remove(playerDot); if (puckDot) canvas.remove(puckDot); if (ghostLine) canvas.remove(ghostLine);
           return;
         }
 
@@ -5350,9 +5367,21 @@ html[data-theme="dark"] {
 
         var curPos = interpPath(eased);
 
+        // Update ghost trail path
+        var newGhostPath = buildGhostPath(eased);
+        if (newGhostPath !== ghostPathStr) {
+          ghostPathStr = newGhostPath;
+          if (ghostLine) canvas.remove(ghostLine);
+          ghostLine = new fabric.Path(ghostPathStr, {
+            fill: 'transparent', stroke: line.colour, strokeWidth: 1.5 * s, opacity: 0.15,
+            selectable: false, evented: false
+          });
+          canvas.add(ghostLine);
+          canvas.sendToBack(ghostLine);
+        }
+
         if (isPlayerMoving) {
           playerDot.set({ left: curPos.x, top: curPos.y });
-          ghostLine.set({ x2: curPos.x, y2: curPos.y });
           if (puckDot) {
             var leadPos = interpPath(Math.min(1, eased + 0.05));
             puckDot.set({ left: leadPos.x, top: leadPos.y });
@@ -5362,7 +5391,6 @@ html[data-theme="dark"] {
           if (puckDot) {
             puckDot.set({ left: curPos.x, top: curPos.y });
           }
-          ghostLine.set({ x2: curPos.x, y2: curPos.y });
         }
 
         canvas.renderAll();

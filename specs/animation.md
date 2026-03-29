@@ -8,8 +8,8 @@
   - Passing: player stays at start, puck flies to end
   - Shooting: player stays at start, red puck flies faster (500ms vs 800ms)
   - Freehand: dot traces the actual freehand path
-- [x] Multi-segment line tracing — dot follows waypoint path via interpolation
-- [x] Ghost trail — faded line follows movement during animation
+- [x] Multi-segment line tracing — dot, puck, and ghost trail all follow waypoint path
+- [x] Ghost trail — faded SVG path traces the actual route (not a straight line)
 - [x] Speed control — 1/3 Speed, 2/3 Speed, Full Speed selector
 - [x] Objects appear instantly at start
 - [x] Stop button halts and restores full drill
