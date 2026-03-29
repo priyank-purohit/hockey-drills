@@ -1107,7 +1107,7 @@ body {
     full:    { logX: 0,         logY: 0, logW: 200,       logH: 85 },
     left:    { logX: 0,         logY: 0, logW: 100,       logH: 85 },
     right:   { logX: 100,       logY: 0, logW: 100,       logH: 85 },
-    neutral: { logX: 200 / 3,   logY: 0, logW: 200 / 3,   logH: 85 }
+    neutral: { logX: 75,         logY: 0, logW: 50,         logH: 85 }
   };
 
   // ==================== UUID HELPER ====================
@@ -2660,21 +2660,35 @@ body {
       _isRink: true
     });
 
-    // Center red line
+    // Lines extend from inner edge of boards to inner edge (bw/2 for seamless look)
+    const lineTop = p + bw / 2;
+    const lineBot = p + rinkH - bw / 2;
+
+    // Center red line (x = 100)
     const centerLine = new fabric.Line(
-      [p + rinkW/2 - vOff, p + bw, p + rinkW/2 - vOff, p + rinkH - bw],
+      [p + 100 * s - vOff, lineTop, p + 100 * s - vOff, lineBot],
       { stroke: '#d32f2f', strokeWidth: 2 * s, selectable: false, evented: false, _isRink: true }
     );
 
-    // Blue lines (1/3 and 2/3)
+    // Blue lines — 75ft and 125ft from left end (NHL standard: 25ft from center)
     const blueLeft = new fabric.Line(
-      [p + rinkW/3 - vOff, p + bw, p + rinkW/3 - vOff, p + rinkH - bw],
+      [p + 75 * s - vOff, lineTop, p + 75 * s - vOff, lineBot],
       { stroke: '#1976d2', strokeWidth: 1.5 * s, selectable: false, evented: false, _isRink: true }
     );
 
     const blueRight = new fabric.Line(
-      [p + rinkW * 2/3 - vOff, p + bw, p + rinkW * 2/3 - vOff, p + rinkH - bw],
+      [p + 125 * s - vOff, lineTop, p + 125 * s - vOff, lineBot],
       { stroke: '#1976d2', strokeWidth: 1.5 * s, selectable: false, evented: false, _isRink: true }
+    );
+
+    // Goal lines — 11ft from each end (NHL standard)
+    const goalLineL = new fabric.Line(
+      [p + 11 * s - vOff, lineTop, p + 11 * s - vOff, lineBot],
+      { stroke: '#d32f2f', strokeWidth: 1 * s, selectable: false, evented: false, _isRink: true }
+    );
+    const goalLineR = new fabric.Line(
+      [p + 189 * s - vOff, lineTop, p + 189 * s - vOff, lineBot],
+      { stroke: '#d32f2f', strokeWidth: 1 * s, selectable: false, evented: false, _isRink: true }
     );
 
     // Center circle
@@ -2701,26 +2715,27 @@ body {
       _isRink: true
     });
 
-    // Face-off circles in end zones (4 circles)
+    // Face-off circles in end zones — 20ft from goal line, 22ft from boards
+    // Left end zone: x=31, Right end zone: x=169
     const faceoffPositions = [
-      { x: 31, y: 22 },  // left top
-      { x: 31, y: 63 },  // left bottom
-      { x: 169, y: 22 }, // right top
-      { x: 169, y: 63 }  // right bottom
+      { x: 31, y: 22 },
+      { x: 31, y: 63 },
+      { x: 169, y: 22 },
+      { x: 169, y: 63 }
     ];
     const faceoffCircles = faceoffPositions.map(pos => new fabric.Circle({
       left: p + pos.x * s - vOff,
       top: p + pos.y * s,
-      radius: 8 * s,
+      radius: 7.5 * s,
       fill: 'transparent',
       stroke: '#d32f2f',
-      strokeWidth: 0.8 * s,
+      strokeWidth: 0.6 * s,
       originX: 'center', originY: 'center',
       selectable: false, evented: false,
       _isRink: true
     }));
 
-    // Face-off dots in end zones (4 dots at same positions as circles)
+    // Face-off dots in end zones
     const faceoffDots = faceoffPositions.map(pos => new fabric.Circle({
       left: p + pos.x * s - vOff,
       top: p + pos.y * s,
@@ -2731,7 +2746,7 @@ body {
       _isRink: true
     }));
 
-    // Neutral zone face-off dots (4 dots, no circles)
+    // Neutral zone face-off dots — 5ft outside each blue line toward center
     const neutralDotPositions = [
       { x: 80, y: 22 },
       { x: 80, y: 63 },
@@ -2748,25 +2763,28 @@ body {
       _isRink: true
     }));
 
-    // Goal creases (simplified rounded rectangles)
-    const creaseL = new fabric.Rect({
-      left: p + 2 * s - vOff, top: p + rinkH / 2 - 4 * s,
-      width: 4 * s, height: 8 * s,
-      fill: 'rgba(25, 118, 210, 0.15)',
-      stroke: '#1976d2', strokeWidth: 0.5 * s,
-      rx: 2 * s, ry: 2 * s,
-      selectable: false, evented: false, _isRink: true
-    });
-    const creaseR = new fabric.Rect({
-      left: p + rinkW - 6 * s - vOff, top: p + rinkH / 2 - 4 * s,
-      width: 4 * s, height: 8 * s,
-      fill: 'rgba(25, 118, 210, 0.15)',
-      stroke: '#1976d2', strokeWidth: 0.5 * s,
-      rx: 2 * s, ry: 2 * s,
+    // Goal creases — semicircles on the goal lines, 6ft radius, facing center ice
+    // Left crease: centered at (11, 42.5), semicircle opening to the right
+    const creaseRadius = 6 * s;
+    const creasePathL = `M ${p + 11*s - vOff} ${p + 42.5*s - creaseRadius}
+      A ${creaseRadius} ${creaseRadius} 0 0 1 ${p + 11*s - vOff} ${p + 42.5*s + creaseRadius}`;
+    const creaseL = new fabric.Path(creasePathL, {
+      fill: 'rgba(173, 216, 230, 0.3)',
+      stroke: '#d32f2f', strokeWidth: 0.5 * s,
       selectable: false, evented: false, _isRink: true
     });
 
-    canvas.add(ice, centerLine, blueLeft, blueRight, centerCircle, centerDot,
+    // Right crease: centered at (189, 42.5), semicircle opening to the left
+    const creasePathR = `M ${p + 189*s - vOff} ${p + 42.5*s - creaseRadius}
+      A ${creaseRadius} ${creaseRadius} 0 0 0 ${p + 189*s - vOff} ${p + 42.5*s + creaseRadius}`;
+    const creaseR = new fabric.Path(creasePathR, {
+      fill: 'rgba(173, 216, 230, 0.3)',
+      stroke: '#d32f2f', strokeWidth: 0.5 * s,
+      selectable: false, evented: false, _isRink: true
+    });
+
+    canvas.add(ice, centerLine, blueLeft, blueRight, goalLineL, goalLineR,
+      centerCircle, centerDot,
       ...faceoffCircles, ...faceoffDots, ...neutralDots, creaseL, creaseR);
     canvas.renderAll();
   }
