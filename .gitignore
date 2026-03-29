@@ -1,6 +1,7 @@
 node_modules/
 package.json
 package-lock.json
-test-drill.mjs
-test-screenshot.png
+tests/
+test-*.mjs
+test-*.png
 .DS_Store
