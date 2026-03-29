@@ -864,6 +864,7 @@ body {
         <button class="action-btn" id="btn-save-json" title="Save as JSON">&#128190; Save</button>
         <button class="action-btn" id="btn-load-json" title="Load JSON">&#128194; Load</button>
         <button class="action-btn" id="btn-export-pdf" title="Export PDF">&#128196; PDF</button>
+        <button class="action-btn" id="btn-share" title="Share drill via link">&#128279; Share</button>
         <button class="action-btn" id="btn-upload-bg" title="Upload rink background">&#128247; BG</button>
         <input type="file" id="file-bg" accept="image/*" style="display:none" />
         <input type="file" id="file-json" accept=".json,application/json" style="display:none" />
@@ -1992,8 +1993,10 @@ body {
     setupLibraryActions();
     setupPractice();
 
-    // Load library and restore active drill
-    restoreFromLibrary();
+    // Load shared drill from URL hash, or restore from library
+    if (!loadFromShareURL()) {
+      restoreFromLibrary();
+    }
 
     saveHistoryState();
   }
@@ -2922,6 +2925,82 @@ body {
     document.getElementById('btn-redo').disabled = historyIndex >= history.length - 1;
   }
 
+  // ==================== SHARE VIA LINK ====================
+  function shareDrill() {
+    const drill = {
+      v: 2,
+      t: document.getElementById('drill-title').value,
+      d: document.getElementById('drill-description').value,
+      i: serializeDrill()
+    };
+    const json = JSON.stringify(drill);
+    // Encode: JSON → URI encode → btoa → URL-safe base64
+    const encoded = btoa(unescape(encodeURIComponent(json)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const url = window.location.origin + window.location.pathname + '#drill=' + encoded;
+
+    if (url.length > 8000) {
+      alert('Warning: This drill is very complex and the share URL is ' + url.length + ' characters long. Some browsers may not support URLs this long.');
+    }
+
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById('btn-share');
+      const orig = btn.innerHTML;
+      btn.innerHTML = '\u2713 Copied!';
+      btn.style.color = '#388e3c';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+    }).catch(() => {
+      prompt('Share this URL:', url);
+    });
+  }
+
+  function loadFromShareURL() {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#drill=')) return false;
+
+    try {
+      const encoded = hash.substring(7);
+      const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+      const json = decodeURIComponent(escape(atob(base64)));
+      const drill = JSON.parse(json);
+
+      document.getElementById('drill-title').value = drill.t || '';
+      document.getElementById('drill-description').value = drill.d || '';
+
+      // Create a new drill in the library with this data
+      const lib = loadLibrary();
+      const id = generateId();
+      const now = new Date().toISOString();
+      lib.drills.push({
+        id: id,
+        title: drill.t || 'Shared Drill',
+        description: drill.d || '',
+        tags: ['Shared'],
+        backgroundUrl: null,
+        items: drill.i || [],
+        createdAt: now,
+        modifiedAt: now
+      });
+      if (!lib.categories.includes('Shared')) lib.categories.push('Shared');
+      lib.activeDrillId = id;
+      saveLibrary(lib);
+
+      // Render the drill
+      suppressHistory = true;
+      renderDrill(drill.i || []);
+      suppressHistory = false;
+      saveHistoryState();
+
+      // Clean the URL hash
+      history.replaceState(null, '', window.location.pathname);
+
+      return true;
+    } catch (e) {
+      console.warn('Failed to load shared drill:', e);
+      return false;
+    }
+  }
+
   // ==================== ACTIONS ====================
   function setupActions() {
     document.getElementById('btn-undo').addEventListener('click', undo);
@@ -2967,6 +3046,7 @@ body {
     document.getElementById('file-json').addEventListener('change', importJSON);
 
     document.getElementById('btn-export-pdf').addEventListener('click', exportPDF);
+    document.getElementById('btn-share').addEventListener('click', shareDrill);
 
     document.getElementById('btn-upload-bg').addEventListener('click', () => {
       document.getElementById('file-bg').click();
