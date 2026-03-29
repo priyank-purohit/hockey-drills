@@ -991,6 +991,7 @@ html[data-theme="dark"] {
         <!-- Annotate -->
         <span class="toolbar-label">Annotate</span>
         <button class="tool-btn" data-tool="text" title="Add text label">A Text</button>
+        <button class="tool-btn" data-tool="freehand" title="Freehand draw">&#9998; Draw</button>
       </div>
 
       <!-- Colours + Actions -->
@@ -1004,6 +1005,15 @@ html[data-theme="dark"] {
         <div class="colour-swatch" data-colour="#212121" style="background:#212121" title="Black"></div>
         <div class="colour-swatch" data-colour="#7b1fa2" style="background:#7b1fa2" title="Purple"></div>
         <div class="colour-swatch" data-colour="#00897b" style="background:#00897b" title="Teal"></div>
+
+        <div class="toolbar-divider"></div>
+
+        <span class="toolbar-label">Width</span>
+        <select id="line-thickness" class="action-btn" style="padding:4px 6px;">
+          <option value="thin">Thin</option>
+          <option value="medium" selected>Medium</option>
+          <option value="thick">Thick</option>
+        </select>
 
         <div class="toolbar-divider"></div>
 
@@ -1253,7 +1263,8 @@ html[data-theme="dark"] {
       pylon: '#f57c00',
       puck1: '#212121',
       puck5: '#212121',
-      text: '#212121'
+      text: '#212121',
+      freehand: '#212121'
     },
 
     // Undo/redo
@@ -3425,6 +3436,17 @@ html[data-theme="dark"] {
       enableMoveMode();
     }
 
+    // Freehand drawing mode
+    if (tool === 'freehand') {
+      canvas.isDrawingMode = true;
+      canvas.freeDrawingBrush.color = getCurrentColour();
+      const thicknessMap = { thin: 0.5, medium: 1, thick: 2 };
+      const thVal = document.getElementById('line-thickness') ? document.getElementById('line-thickness').value : 'medium';
+      canvas.freeDrawingBrush.width = (thicknessMap[thVal] || 1) * scaleFactor;
+    } else {
+      canvas.isDrawingMode = false;
+    }
+
     // Show/hide text input bar
     const textBar = document.getElementById('text-input-bar');
     if (tool === 'text') {
@@ -3441,6 +3463,7 @@ html[data-theme="dark"] {
     if (activeTool === 'move') {
       disableMoveMode();
     }
+    canvas.isDrawingMode = false;
     cancelLineDrawing();
     stepItems = null;
     stepIndex = 0;
@@ -3504,6 +3527,36 @@ html[data-theme="dark"] {
 
     // Move mode: update logical coords after drag
     canvas.on('object:modified', onObjectModified);
+
+    // Freehand path created
+    canvas.on('path:created', function(opt) {
+      if (activeTool !== 'freehand') return;
+      const pathObj = opt.path;
+      const p = CONFIG.RINK_PADDING;
+      const s = scaleFactor;
+      const vc = getViewConfig();
+
+      // Convert path points to logical coordinates
+      const logPath = pathObj.path.map(function(seg) {
+        return seg.map(function(v, i) {
+          if (i === 0) return v; // command letter (M, L, Q, etc)
+          return (i % 2 === 1) ? (v - p) / s + vc.logX : (v - p) / s + vc.logY;
+        });
+      });
+
+      const thicknessEl = document.getElementById('line-thickness');
+      const thicknessVal = thicknessEl ? thicknessEl.value : 'medium';
+
+      pathObj._objectType = 'freehand';
+      pathObj._colour = pathObj.stroke;
+      pathObj._logPath = logPath;
+      pathObj._thickness = thicknessVal;
+      pathObj._logX = 0;
+      pathObj._logY = 0;
+      pathObj.set({ selectable: false, evented: true });
+      saveHistoryState();
+      autoSave();
+    });
   }
 
   function onCanvasMouseDown(opt) {
@@ -3617,10 +3670,12 @@ html[data-theme="dark"] {
       const s = scaleFactor;
       const p = CONFIG.RINK_PADDING;
       const vc = getViewConfig();
+      const thicknessVal = document.getElementById('line-thickness') ? document.getElementById('line-thickness').value : 'medium';
       createLine(activeTool,
         { x: (start.x - p) / s + vc.logX, y: (start.y - p) / s + vc.logY },
         { x: (end.x - p) / s + vc.logX, y: (end.y - p) / s + vc.logY },
-        getCurrentColour());
+        getCurrentColour(),
+        thicknessVal);
       lineStartPoint = null;
 
       saveHistoryState();
@@ -3638,9 +3693,11 @@ html[data-theme="dark"] {
   }
 
   // start/end are in LOGICAL coordinates (0-200 x 0-85)
-  function createLine(type, logStart, logEnd, colour) {
+  function createLine(type, logStart, logEnd, colour, thickness) {
     const s = scaleFactor;
-    const sw = 1 * s;
+    const thicknessMap = { thin: 0.5, medium: 1, thick: 2 };
+    const thicknessVal = thickness || (document.getElementById('line-thickness') ? document.getElementById('line-thickness').value : 'medium');
+    const sw = (thicknessMap[thicknessVal] || 1) * s;
     const p = CONFIG.RINK_PADDING;
     const vc = getViewConfig();
     const start = { x: (logStart.x - vc.logX) * s + p, y: (logStart.y - vc.logY) * s + p };
@@ -3688,7 +3745,8 @@ html[data-theme="dark"] {
       _drillType: 'line', _lineType: type,
       _logStartX: logStart.x, _logStartY: logStart.y,
       _logEndX: logEnd.x, _logEndY: logEnd.y,
-      _colour: colour
+      _colour: colour,
+      _thickness: thicknessVal || 'medium'
     });
 
     canvas.add(group);
@@ -4069,6 +4127,40 @@ html[data-theme="dark"] {
     autoSave();
   }
 
+  // ==================== FREEHAND PATH RENDERING ====================
+  function renderFreehandPath(item) {
+    const s = scaleFactor;
+    const p = CONFIG.RINK_PADDING;
+    const vc = getViewConfig();
+    const thicknessMap = { thin: 0.5, medium: 1, thick: 2 };
+
+    // Convert logical coordinates back to pixel coordinates
+    const pixPath = (item.logPath || []).map(function(seg) {
+      return seg.map(function(v, i) {
+        if (i === 0) return v; // command letter
+        return (i % 2 === 1) ? (v - vc.logX) * s + p : (v - vc.logY) * s + p;
+      });
+    });
+
+    const pathStr = pixPath.map(function(seg) { return seg.join(' '); }).join(' ');
+    var obj = new fabric.Path(pathStr, {
+      fill: 'transparent',
+      stroke: item.colour || '#212121',
+      strokeWidth: (thicknessMap[item.thickness] || 1) * s,
+      strokeLineCap: 'round',
+      strokeLineJoin: 'round',
+      selectable: false,
+      evented: true
+    });
+    obj._objectType = 'freehand';
+    obj._colour = item.colour || '#212121';
+    obj._logPath = item.logPath;
+    obj._thickness = item.thickness || 'medium';
+    obj._logX = 0;
+    obj._logY = 0;
+    canvas.add(obj);
+  }
+
   // ==================== SEMANTIC SERIALIZATION ====================
   // Extracts drill data as a simple array of {type, ...params} objects.
   // Positions stored in logical coordinates (0-200 x 0-85).
@@ -4086,7 +4178,17 @@ html[data-theme="dark"] {
           startY: obj._logStartY,
           endX: obj._logEndX,
           endY: obj._logEndY,
-          colour: obj._colour
+          colour: obj._colour,
+          thickness: obj._thickness || 'medium'
+        });
+      } else if (obj._objectType === 'freehand') {
+        items.push({
+          kind: 'object',
+          objectType: 'freehand',
+          colour: obj._colour,
+          logPath: obj._logPath,
+          thickness: obj._thickness || 'medium',
+          x: 0, y: 0
         });
       } else if (obj._objectType) {
         const entry = {
@@ -4119,7 +4221,10 @@ html[data-theme="dark"] {
         createLine(item.lineType,
           { x: item.startX, y: item.startY },
           { x: item.endX, y: item.endY },
-          item.colour);
+          item.colour,
+          item.thickness || 'medium');
+      } else if (item.kind === 'object' && item.objectType === 'freehand') {
+        renderFreehandPath(item);
       } else if (item.kind === 'object') {
         const extra = (item.objectType === 'text') ? { text: item.text, size: item.size || 'medium', rotation: item.rotation || '0' } : item.text;
         const obj = placeObject(item.objectType,
@@ -4788,6 +4893,7 @@ html[data-theme="dark"] {
     canvas.clear();
     drawDefaultRink();
     objects.forEach(function(item) {
+      if (item.objectType === 'freehand') { renderFreehandPath(item); return; }
       var animExtra = (item.objectType === 'text') ? { text: item.text, size: item.size || 'medium', rotation: item.rotation || '0' } : item.text;
       var obj = placeObject(item.objectType, {x: item.x, y: item.y}, item.colour, item.index, animExtra);
       if (obj) canvas.add(obj);
@@ -4808,6 +4914,7 @@ html[data-theme="dark"] {
           canvas.clear();
           drawDefaultRink();
           objects.forEach(function(item) {
+            if (item.objectType === 'freehand') { renderFreehandPath(item); return; }
             var animExtra = (item.objectType === 'text') ? { text: item.text, size: item.size || 'medium', rotation: item.rotation || '0' } : item.text;
             var obj = placeObject(item.objectType, {x: item.x, y: item.y}, item.colour, item.index, animExtra);
             if (obj) canvas.add(obj);
@@ -4916,7 +5023,8 @@ html[data-theme="dark"] {
           createLine(line.lineType,
             { x: line.startX, y: line.startY },
             { x: line.endX, y: line.endY },
-            line.colour);
+            line.colour,
+            line.thickness || 'medium');
           lineIndex++;
           animationTimer = setTimeout(animateNextLine, 200);
         }
@@ -4950,6 +5058,7 @@ html[data-theme="dark"] {
       canvas.clear();
       drawDefaultRink();
       objects.forEach(function(item) {
+        if (item.objectType === 'freehand') { renderFreehandPath(item); return; }
         var animExtra = (item.objectType === 'text') ? { text: item.text, size: item.size || 'medium', rotation: item.rotation || '0' } : item.text;
         var obj = placeObject(item.objectType, {x: item.x, y: item.y}, item.colour, item.index, animExtra);
         if (obj) canvas.add(obj);
@@ -4966,7 +5075,8 @@ html[data-theme="dark"] {
       createLine(line.lineType,
         { x: line.startX, y: line.startY },
         { x: line.endX, y: line.endY },
-        line.colour);
+        line.colour,
+        line.thickness || 'medium');
       stepIndex++;
     }
 
@@ -5013,7 +5123,8 @@ html[data-theme="dark"] {
         skate: 'Skating Line', puck: 'Puck Line', pass: 'Passing Line', shoot: 'Shooting Line',
         forward: 'Forward', defense: 'Defenseman', goalie: 'Goalie',
         net: 'Hockey Net', pylon: 'Pylon', puck1: 'Puck', puck5: 'Multi-Puck',
-        text: 'Text Annotation'
+        text: 'Text Annotation',
+        freehand: 'Freehand Draw'
       };
       el.textContent = `Tool: ${names[activeTool] || activeTool}`;
     }
