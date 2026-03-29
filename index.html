@@ -364,6 +364,12 @@ body {
   background: var(--primary-hover);
 }
 
+.action-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
 .view-btn.active {
   background: var(--primary);
   color: #fff;
@@ -879,6 +885,8 @@ body {
         <button class="action-btn" id="btn-undo" title="Undo (Ctrl+Z)" disabled>&#8630; Undo</button>
         <button class="action-btn" id="btn-redo" title="Redo (Ctrl+Y)" disabled>&#8631; Redo</button>
         <button class="action-btn" id="btn-play" title="Play drill animation">&#9654; Play</button>
+        <button class="action-btn" id="btn-step" title="Step through drill">&#9197; Step</button>
+        <button class="action-btn" id="btn-loop" title="Loop animation">&#128257; Loop</button>
 
         <div class="toolbar-divider"></div>
 
@@ -2333,6 +2341,11 @@ body {
   let isAnimating = false;
   let animationTimer = null;
   let savedItemsForAnimation = null;
+  let loopAnimation = false;
+
+  // Step-through state
+  let stepIndex = 0;
+  let stepItems = null;
 
   // Long-press tracking
   let longPressTimer = null;
@@ -3579,6 +3592,11 @@ body {
     document.getElementById('btn-undo').addEventListener('click', undo);
     document.getElementById('btn-redo').addEventListener('click', redo);
     document.getElementById('btn-play').addEventListener('click', playAnimation);
+    document.getElementById('btn-step').addEventListener('click', stepDrill);
+    document.getElementById('btn-loop').addEventListener('click', function() {
+      loopAnimation = !loopAnimation;
+      document.getElementById('btn-loop').classList.toggle('active', loopAnimation);
+    });
 
     const resetBtn = document.getElementById('btn-reset');
     let resetPending = false;
@@ -3912,7 +3930,24 @@ body {
     var lineIndex = 0;
 
     function animateNextLine() {
-      if (!isAnimating || lineIndex >= lines.length) {
+      if (!isAnimating) { stopAnimation(); return; }
+      if (lineIndex >= lines.length) {
+        if (loopAnimation) {
+          // Reset and replay from the beginning
+          lineIndex = 0;
+          suppressHistory = true;
+          canvas.clear();
+          drawDefaultRink();
+          objects.forEach(function(item) {
+            var animExtra = (item.objectType === 'text') ? { text: item.text, size: item.size || 'medium', rotation: item.rotation || '0' } : item.text;
+            var obj = placeObject(item.objectType, {x: item.x, y: item.y}, item.colour, item.index, animExtra);
+            if (obj) canvas.add(obj);
+          });
+          canvas.renderAll();
+          suppressHistory = false;
+          animationTimer = setTimeout(animateNextLine, 500);
+          return;
+        }
         stopAnimation();
         return;
       }
@@ -3934,11 +3969,18 @@ body {
       });
       canvas.add(dot);
 
+      // Ghost trail line that grows with the dot
+      var ghostLine = new fabric.Line([startPx.x, startPx.y, startPx.x, startPx.y], {
+        stroke: line.colour, strokeWidth: 2 * s, opacity: 0.15,
+        selectable: false, evented: false
+      });
+      canvas.add(ghostLine);
+
       var duration = 800;
       var startTime = Date.now();
 
       function frame() {
-        if (!isAnimating) { canvas.remove(dot); return; }
+        if (!isAnimating) { canvas.remove(dot); canvas.remove(ghostLine); return; }
 
         var elapsed = Date.now() - startTime;
         var t = Math.min(elapsed / duration, 1);
@@ -3946,17 +3988,19 @@ body {
         // Ease-in-out
         var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
-        dot.set({
-          left: startPx.x + (endPx.x - startPx.x) * eased,
-          top: startPx.y + (endPx.y - startPx.y) * eased
-        });
+        var curX = startPx.x + (endPx.x - startPx.x) * eased;
+        var curY = startPx.y + (endPx.y - startPx.y) * eased;
+
+        dot.set({ left: curX, top: curY });
+        ghostLine.set({ x2: curX, y2: curY });
         canvas.renderAll();
 
         if (t < 1) {
           animationTimer = requestAnimationFrame(frame);
         } else {
-          // Done with this line - draw the full line and remove dot
+          // Done with this line - draw the full line and remove dot + ghost
           canvas.remove(dot);
+          canvas.remove(ghostLine);
           createLine(line.lineType,
             { x: line.startX, y: line.startY },
             { x: line.endX, y: line.endY },
@@ -3972,6 +4016,54 @@ body {
 
     // Start after brief delay
     animationTimer = setTimeout(animateNextLine, 500);
+  }
+
+  function stepDrill() {
+    // If currently animating, stop first
+    if (isAnimating) { stopAnimation(); return; }
+
+    if (!stepItems) {
+      // First click: initialize step mode
+      stepItems = serializeDrill();
+      stepIndex = 0;
+
+      var objects = stepItems.filter(function(i) { return i.kind === 'object'; });
+      var lines = stepItems.filter(function(i) { return i.kind === 'line'; });
+
+      // Store lines for stepping
+      stepItems._lines = lines;
+      stepItems._objects = objects;
+
+      // Clear canvas and draw only objects (no lines)
+      suppressHistory = true;
+      canvas.clear();
+      drawDefaultRink();
+      objects.forEach(function(item) {
+        var animExtra = (item.objectType === 'text') ? { text: item.text, size: item.size || 'medium', rotation: item.rotation || '0' } : item.text;
+        var obj = placeObject(item.objectType, {x: item.x, y: item.y}, item.colour, item.index, animExtra);
+        if (obj) canvas.add(obj);
+      });
+      canvas.renderAll();
+      suppressHistory = false;
+      return;
+    }
+
+    // Subsequent clicks: draw next line instantly
+    var lines = stepItems._lines;
+    if (stepIndex < lines.length) {
+      var line = lines[stepIndex];
+      createLine(line.lineType,
+        { x: line.startX, y: line.startY },
+        { x: line.endX, y: line.endY },
+        line.colour);
+      stepIndex++;
+    }
+
+    // All lines drawn: reset step state
+    if (stepIndex >= lines.length) {
+      stepItems = null;
+      stepIndex = 0;
+    }
   }
 
   function stopAnimation() {
