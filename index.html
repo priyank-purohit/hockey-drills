@@ -343,6 +343,12 @@ body {
   background: var(--primary-hover);
 }
 
+.view-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
 /* ========== Colour Picker ========== */
 .colour-swatch {
   width: 24px;
@@ -834,6 +840,14 @@ body {
 
         <div class="toolbar-divider"></div>
 
+        <span class="toolbar-label">View</span>
+        <button class="action-btn view-btn active" data-view="full" title="Full rink">Full</button>
+        <button class="action-btn view-btn" data-view="left" title="Left half">Left</button>
+        <button class="action-btn view-btn" data-view="right" title="Right half">Right</button>
+        <button class="action-btn view-btn" data-view="neutral" title="Neutral zone">NZ</button>
+
+        <div class="toolbar-divider"></div>
+
         <button class="action-btn" id="btn-undo" title="Undo (Ctrl+Z)" disabled>&#8630; Undo</button>
         <button class="action-btn" id="btn-redo" title="Redo (Ctrl+Y)" disabled>&#8631; Redo</button>
 
@@ -959,6 +973,14 @@ body {
     // Squiggly wave params
     WAVE_AMP: 1.5,
     WAVE_FREQ: 0.8
+  };
+
+  // View configurations: logical viewport rectangles within the 200x85 rink space
+  const VIEW_CONFIGS = {
+    full:    { logX: 0,         logY: 0, logW: 200,       logH: 85 },
+    left:    { logX: 0,         logY: 0, logW: 100,       logH: 85 },
+    right:   { logX: 100,       logY: 0, logW: 100,       logH: 85 },
+    neutral: { logX: 200 / 3,   logY: 0, logW: 200 / 3,   logH: 85 }
   };
 
   // ==================== UUID HELPER ====================
@@ -1914,6 +1936,12 @@ body {
   let activeColour = null; // null = use tool default
   let lineStartPoint = null;
   let linePreviewLine = null;
+  let rinkView = 'full'; // 'full', 'left', 'right', 'neutral'
+
+  // Helper: get the current view config
+  function getViewConfig() {
+    return VIEW_CONFIGS[rinkView] || VIEW_CONFIGS.full;
+  }
 
   // Player index helper — finds next available index by scanning canvas
   function getNextPlayerIndex(letter) {
@@ -1944,6 +1972,7 @@ body {
     drawDefaultRink();
     setupToolbar();
     setupColourPicker();
+    setupViewToggle();
     setupActions();
     setupKeyboard();
     setupCanvasInteractions();
@@ -1982,11 +2011,12 @@ body {
   function calcCanvasSize() {
     const wrapper = document.getElementById('canvas-wrapper');
     const availableWidth = wrapper.clientWidth;
+    const vc = getViewConfig();
 
     // Constrain by available height: viewport minus space above canvas (toolbar, title, etc.)
     const wrapperTop = wrapper.getBoundingClientRect().top;
     const availableHeight = window.innerHeight - wrapperTop - 40; // 40px for status bar + padding
-    const maxWidthFromHeight = availableHeight * (CONFIG.RINK_W / CONFIG.RINK_H);
+    const maxWidthFromHeight = availableHeight * (vc.logW / vc.logH);
 
     // Use the smaller of the two to ensure canvas fits both dimensions
     const effectiveWidth = Math.min(availableWidth, maxWidthFromHeight);
@@ -1996,9 +2026,10 @@ body {
   function setupCanvas() {
     const effectiveWidth = calcCanvasSize();
     const pad = CONFIG.RINK_PADDING * 2;
-    scaleFactor = (effectiveWidth - pad) / CONFIG.RINK_W;
-    const w = Math.floor(CONFIG.RINK_W * scaleFactor + pad);
-    const h = Math.floor(CONFIG.RINK_H * scaleFactor + pad);
+    const vc = getViewConfig();
+    scaleFactor = (effectiveWidth - pad) / vc.logW;
+    const w = Math.floor(vc.logW * scaleFactor + pad);
+    const h = Math.floor(vc.logH * scaleFactor + pad);
 
     canvas = new fabric.Canvas('rink-canvas', {
       width: w,
@@ -2021,10 +2052,11 @@ body {
   function resizeCanvas() {
     const effectiveWidth = calcCanvasSize();
     const pad = CONFIG.RINK_PADDING * 2;
-    scaleFactor = (effectiveWidth - pad) / CONFIG.RINK_W;
+    const vc = getViewConfig();
+    scaleFactor = (effectiveWidth - pad) / vc.logW;
 
-    const w = Math.floor(CONFIG.RINK_W * scaleFactor + pad);
-    const h = Math.floor(CONFIG.RINK_H * scaleFactor + pad);
+    const w = Math.floor(vc.logW * scaleFactor + pad);
+    const h = Math.floor(vc.logH * scaleFactor + pad);
 
     canvas.setWidth(w);
     canvas.setHeight(h);
@@ -2044,9 +2076,11 @@ body {
   // ==================== RINK DRAWING ====================
   function drawDefaultRink() {
     if (CONFIG.BACKGROUND_URL) {
+      const bgVc = getViewConfig();
+      const bgVOff = bgVc.logX * scaleFactor;
       fabric.Image.fromURL(CONFIG.BACKGROUND_URL, function(img) {
         img.set({
-          left: 0, top: 0,
+          left: -bgVOff, top: 0,
           scaleX: (CONFIG.RINK_W * scaleFactor) / img.width,
           scaleY: (CONFIG.RINK_H * scaleFactor) / img.height,
           selectable: false, evented: false,
@@ -2062,14 +2096,16 @@ body {
 
     const s = scaleFactor;
     const p = CONFIG.RINK_PADDING; // pixel padding offset
+    const vc = getViewConfig();
+    const vOff = vc.logX * s; // pixel offset for the view's logical X origin
     const bw = CONFIG.RINK_BORDER_WIDTH * s;
     const cr = CONFIG.RINK_CORNER_RADIUS * s;
     const rinkW = CONFIG.RINK_W * s;
     const rinkH = CONFIG.RINK_H * s;
 
-    // Ice background — offset by padding, inset by half border so stroke stays inside
+    // Ice background — offset by padding and view offset, inset by half border so stroke stays inside
     const ice = new fabric.Rect({
-      left: p + bw / 2, top: p + bw / 2,
+      left: p + bw / 2 - vOff, top: p + bw / 2,
       width: rinkW - bw,
       height: rinkH - bw,
       rx: cr, ry: cr,
@@ -2082,24 +2118,24 @@ body {
 
     // Center red line
     const centerLine = new fabric.Line(
-      [p + rinkW/2, p + bw, p + rinkW/2, p + rinkH - bw],
+      [p + rinkW/2 - vOff, p + bw, p + rinkW/2 - vOff, p + rinkH - bw],
       { stroke: '#d32f2f', strokeWidth: 2 * s, selectable: false, evented: false, _isRink: true }
     );
 
     // Blue lines (1/3 and 2/3)
     const blueLeft = new fabric.Line(
-      [p + rinkW/3, p + bw, p + rinkW/3, p + rinkH - bw],
+      [p + rinkW/3 - vOff, p + bw, p + rinkW/3 - vOff, p + rinkH - bw],
       { stroke: '#1976d2', strokeWidth: 1.5 * s, selectable: false, evented: false, _isRink: true }
     );
 
     const blueRight = new fabric.Line(
-      [p + rinkW * 2/3, p + bw, p + rinkW * 2/3, p + rinkH - bw],
+      [p + rinkW * 2/3 - vOff, p + bw, p + rinkW * 2/3 - vOff, p + rinkH - bw],
       { stroke: '#1976d2', strokeWidth: 1.5 * s, selectable: false, evented: false, _isRink: true }
     );
 
     // Center circle
     const centerCircle = new fabric.Circle({
-      left: p + rinkW/2,
+      left: p + rinkW/2 - vOff,
       top: p + rinkH/2,
       radius: 10 * s,
       fill: 'transparent',
@@ -2112,7 +2148,7 @@ body {
 
     // Center dot
     const centerDot = new fabric.Circle({
-      left: p + rinkW/2,
+      left: p + rinkW/2 - vOff,
       top: p + rinkH/2,
       radius: 1.5 * s,
       fill: '#1976d2',
@@ -2193,6 +2229,19 @@ body {
         activeColour = swatch.dataset.colour;
         document.querySelectorAll('.colour-swatch').forEach(s => s.classList.remove('active'));
         swatch.classList.add('active');
+      });
+    });
+  }
+
+  // ==================== VIEW TOGGLE ====================
+  function setupViewToggle() {
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        rinkView = btn.dataset.view;
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        // Re-setup canvas size and re-render
+        resizeCanvas();
       });
     });
   }
@@ -2302,12 +2351,13 @@ body {
       linePreviewLine = null;
       document.getElementById('line-hint').style.display = 'none';
 
-      // Store logical coordinates (subtract padding before converting)
+      // Store logical coordinates (subtract padding before converting, add view offset)
       const s = scaleFactor;
       const p = CONFIG.RINK_PADDING;
+      const vc = getViewConfig();
       createLine(activeTool,
-        { x: (start.x - p) / s, y: (start.y - p) / s },
-        { x: (end.x - p) / s, y: (end.y - p) / s },
+        { x: (start.x - p) / s + vc.logX, y: (start.y - p) / s + vc.logY },
+        { x: (end.x - p) / s + vc.logX, y: (end.y - p) / s + vc.logY },
         getCurrentColour());
       lineStartPoint = null;
 
@@ -2330,8 +2380,9 @@ body {
     const s = scaleFactor;
     const sw = 1 * s;
     const p = CONFIG.RINK_PADDING;
-    const start = { x: logStart.x * s + p, y: logStart.y * s + p };
-    const end = { x: logEnd.x * s + p, y: logEnd.y * s + p };
+    const vc = getViewConfig();
+    const start = { x: (logStart.x - vc.logX) * s + p, y: (logStart.y - vc.logY) * s + p };
+    const end = { x: (logEnd.x - vc.logX) * s + p, y: (logEnd.y - vc.logY) * s + p };
     const objects = [];
 
     // Shorten line so it ends at the arrow base, not the tip
@@ -2431,9 +2482,10 @@ body {
   function handleObjectClick(pointer) {
     const colour = getCurrentColour();
     const s = scaleFactor;
-    // Convert to logical coords
+    // Convert to logical coords (accounting for view offset)
     const p = CONFIG.RINK_PADDING;
-    const logPos = { x: (pointer.x - p) / s, y: (pointer.y - p) / s };
+    const vc = getViewConfig();
+    const logPos = { x: (pointer.x - p) / s + vc.logX, y: (pointer.y - p) / s + vc.logY };
     let obj;
 
     switch (activeTool) {
@@ -2472,7 +2524,8 @@ body {
   function placeObject(type, logPos, colour, index) {
     const s = scaleFactor;
     const p = CONFIG.RINK_PADDING;
-    const pixPos = { x: logPos.x * s + p, y: logPos.y * s + p };
+    const vc = getViewConfig();
+    const pixPos = { x: (logPos.x - vc.logX) * s + p, y: (logPos.y - vc.logY) * s + p };
     let obj;
 
     switch (type) {
@@ -2683,6 +2736,7 @@ body {
 
     const s = scaleFactor;
     const p = CONFIG.RINK_PADDING;
+    const vc = getViewConfig();
 
     if (obj._drillType === 'line') {
       // For line groups: compute delta from old position to new position
@@ -2691,9 +2745,9 @@ body {
       const newCenterX = obj.left;
       const newCenterY = obj.top;
 
-      // Old pixel center based on logical coords
-      const oldCenterX = ((obj._logStartX + obj._logEndX) / 2) * s + p;
-      const oldCenterY = ((obj._logStartY + obj._logEndY) / 2) * s + p;
+      // Old pixel center based on logical coords (accounting for view offset)
+      const oldCenterX = ((obj._logStartX + obj._logEndX) / 2 - vc.logX) * s + p;
+      const oldCenterY = ((obj._logStartY + obj._logEndY) / 2 - vc.logY) * s + p;
 
       const deltaLogX = (newCenterX - oldCenterX) / s;
       const deltaLogY = (newCenterY - oldCenterY) / s;
@@ -2705,8 +2759,8 @@ body {
     } else if (obj._objectType) {
       // For regular objects (players, pylons, nets, pucks)
       // These use originX/Y: 'center' so left/top is the center
-      obj._logX = (obj.left - p) / s;
-      obj._logY = (obj.top - p) / s;
+      obj._logX = (obj.left - p) / s + vc.logX;
+      obj._logY = (obj.top - p) / s + vc.logY;
     }
 
     saveHistoryState();
@@ -3011,11 +3065,12 @@ body {
       doc.text(lines, pdfW / 2, 23, { align: 'center' });
     }
 
-    // Canvas image
+    // Canvas image — use current view's aspect ratio
     const dataUrl = canvas.toDataURL({ format: 'png', multiplier: 2 });
+    const pdfVc = getViewConfig();
     const imgY = desc ? 30 : 22;
     const imgH = pdfH - imgY - 15;
-    const imgW = imgH * (CONFIG.RINK_W / CONFIG.RINK_H);
+    const imgW = imgH * (pdfVc.logW / pdfVc.logH);
     const imgX = (pdfW - imgW) / 2;
 
     doc.addImage(dataUrl, 'PNG', imgX, imgY, imgW, imgH);
