@@ -3573,6 +3573,10 @@ html[data-theme="dark"] {
         activeColour = swatch.dataset.colour;
         document.querySelectorAll('.colour-swatch').forEach(s => s.classList.remove('active'));
         swatch.classList.add('active');
+        // Update freehand brush colour in real time
+        if (activeTool === 'freehand' && canvas.isDrawingMode) {
+          canvas.freeDrawingBrush.color = activeColour;
+        }
       });
     });
   }
@@ -4225,6 +4229,9 @@ html[data-theme="dark"] {
   function enableMoveMode() {
     canvas.getObjects().forEach(obj => {
       if (obj._isRink || obj._isRinkBg || obj._isPreview) return;
+      // Store original position for accurate delta calculation on move
+      obj._preMoveLeft = obj.left;
+      obj._preMoveTop = obj.top;
       obj.set({
         selectable: true,
         evented: true,
@@ -4266,13 +4273,13 @@ html[data-theme="dark"] {
     const vc = getViewConfig();
 
     if (obj._drillType === 'line') {
-      // For line groups: compute delta from old position to new position
+      // For line groups: compute pixel delta using stored pre-move position
       const newCenterX = obj.left;
       const newCenterY = obj.top;
-
-      // Old pixel center based on logical coords (accounting for view offset)
-      const oldCenterX = ((obj._logStartX + obj._logEndX) / 2 - vc.logX) * s + p;
-      const oldCenterY = ((obj._logStartY + obj._logEndY) / 2 - vc.logY) * s + p;
+      const oldCenterX = (obj._preMoveLeft !== undefined) ? obj._preMoveLeft
+        : ((obj._logStartX + obj._logEndX) / 2 - vc.logX) * s + p;
+      const oldCenterY = (obj._preMoveTop !== undefined) ? obj._preMoveTop
+        : ((obj._logStartY + obj._logEndY) / 2 - vc.logY) * s + p;
 
       const deltaLogX = (newCenterX - oldCenterX) / s;
       const deltaLogY = (newCenterY - oldCenterY) / s;
@@ -4289,6 +4296,9 @@ html[data-theme="dark"] {
           y: pt.y + deltaLogY
         }));
       }
+      // Update stored pre-move position for subsequent drags
+      obj._preMoveLeft = newCenterX;
+      obj._preMoveTop = newCenterY;
     } else if (obj._objectType) {
       // For regular objects (players, pylons, nets, pucks)
       // These use originX/Y: 'center' so left/top is the center
@@ -4593,7 +4603,7 @@ html[data-theme="dark"] {
         saveLibrary(lib);
 
         // Clean the URL hash and switch to Practice Plan tab
-        history.replaceState(null, '', window.location.pathname);
+        window.history.replaceState(null, '', window.location.pathname);
         setTimeout(function() { switchTab('practice'); }, 100);
 
         return true;
@@ -4632,14 +4642,20 @@ html[data-theme="dark"] {
       lib.activeDrillId = id;
       saveLibrary(lib);
 
+      // Set tags so they appear in editor and aren't lost on auto-save
+      currentTags = ['Shared'];
+      renderTagChips();
+      updateTagSuggestions();
+
       // Render the drill
       suppressHistory = true;
       renderDrill(drill.i || []);
       suppressHistory = false;
       saveHistoryState();
+      updateBreadcrumb();
 
       // Clean the URL hash
-      history.replaceState(null, '', window.location.pathname);
+      window.history.replaceState(null, '', window.location.pathname);
 
       return true;
     } catch (e) {
@@ -5103,14 +5119,14 @@ html[data-theme="dark"] {
       }
 
       // Cmd/Ctrl+Z — undo
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
         return;
       }
 
       // Cmd/Ctrl+Y or Cmd/Ctrl+Shift+Z — redo
-      if ((e.metaKey || e.ctrlKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+      if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
         e.preventDefault();
         redo();
         return;
