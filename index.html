@@ -2742,26 +2742,6 @@ body {
         selectable: false, evented: false, _isRink: true
       }));
 
-      // Hash marks — 4 L-shaped marks at top and bottom of each circle
-      const hLen = 3 * s;  // length of hash mark lines
-      const hOff = foRadius * s; // offset from center (on the circle)
-      const hGap = 3 * s;  // horizontal offset from center for the pair
-
-      // Top hash marks (two vertical lines with horizontal caps)
-      [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(([hDir, vSide]) => {
-        const cx = rx(pos.x) + hDir * hGap;
-        const cy = ry(pos.y) + vSide * hOff;
-        // Vertical line
-        elements.push(new fabric.Line(
-          [cx, cy, cx, cy - vSide * hLen],
-          { stroke: '#d32f2f', strokeWidth: lw * 0.7, selectable: false, evented: false, _isRink: true }
-        ));
-        // Horizontal cap
-        elements.push(new fabric.Line(
-          [cx, cy, cx + hDir * hLen, cy],
-          { stroke: '#d32f2f', strokeWidth: lw * 0.7, selectable: false, evented: false, _isRink: true }
-        ));
-      });
     });
 
     // --- Neutral zone face-off dots ---
