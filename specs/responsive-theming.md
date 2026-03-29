@@ -2,6 +2,8 @@
 
 ## Responsive
 - [x] Works on phones (320px+), tablets, desktop
+- [x] Toolbar layout: Row 1 (tools+colours+width), Row 2 (view+play | actions), Bottom bar (export/io)
+- [x] View cycle: single button cycling Full → Left → Right → NZ
 - [x] Toolbar wraps to multiple lines on small screens
 - [x] Canvas auto-scales to fit available space (200:85 ratio)
 - [x] Landscape mobile: canvas constrains to viewport height
