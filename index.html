@@ -687,6 +687,27 @@ body {
   background: var(--primary-hover);
 }
 
+.drill-thumb {
+  width: 160px;
+  height: 68px;
+  background: var(--input-bg);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.drill-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.drill-thumb .thumb-empty {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
 .library-footer {
   display: flex;
   flex-wrap: wrap;
@@ -816,6 +837,7 @@ body {
   .tab-btn { padding: 8px 16px; font-size: 13px; }
   .drill-card { flex-direction: column; }
   .drill-card-actions { flex-direction: row; flex-wrap: wrap; }
+  .drill-thumb { width: 100%; height: 80px; }
 }
 
 /* ========== Manual Theme Overrides ========== */
@@ -2015,12 +2037,19 @@ html[data-theme="dark"] {
     container.querySelectorAll('[data-drill-export]').forEach(btn => {
       btn.addEventListener('click', () => exportDrillJSON(btn.dataset.drillExport));
     });
+
+    // Generate thumbnails lazily after DOM is updated
+    generateVisibleThumbnails();
   }
 
   function renderDrillCard(drill, activeDrillId) {
     const isActive = drill.id === activeDrillId;
     const isDeletePending = deleteDrillPending[drill.id];
     let html = '<div class="drill-card' + (isActive ? ' active-drill' : '') + '">';
+    const hasItems = drill.items && drill.items.length > 0;
+    html += '<div class="drill-thumb" data-drill-id="' + drill.id + '">'
+      + (hasItems ? '' : '<span class="thumb-empty">No items</span>')
+      + '</div>';
     html += '<div class="drill-card-info">';
     html += '<div class="drill-card-title">' + escHtml(drill.title || 'Untitled Drill') + (isActive ? ' (active)' : '') + '</div>';
     if (drill.description) {
@@ -2047,6 +2076,222 @@ html[data-theme="dark"] {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  // ==================== DRILL THUMBNAILS ====================
+  // Cache generated thumbnail data URLs to avoid re-rendering on every library render
+  const thumbnailCache = {};
+
+  function generateThumbnail(drill, callback) {
+    // Return cached version if available and drill hasn't changed
+    const cacheKey = drill.id + '_' + (drill.modifiedAt || '');
+    if (thumbnailCache[cacheKey]) {
+      callback(thumbnailCache[cacheKey]);
+      return;
+    }
+
+    const thumbW = 240;
+    const thumbH = 102; // maintains 200:85 ratio roughly
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = thumbW;
+    tempCanvas.height = thumbH;
+    const fCanvas = new fabric.StaticCanvas(tempCanvas, { width: thumbW, height: thumbH });
+
+    const s = thumbW / CONFIG.RINK_W; // thumbnail scale factor
+    const p = 2; // minimal padding
+    const bw = CONFIG.RINK_BORDER_WIDTH * s;
+    const cr = CONFIG.RINK_CORNER_RADIUS * s;
+    const rinkW = CONFIG.RINK_W * s;
+    const rinkH = CONFIG.RINK_H * s;
+    const lw = 0.5 * s;
+    const rinkRed = 'rgba(211, 47, 47, 0.35)';
+    const rinkBlue = 'rgba(25, 118, 210, 0.35)';
+
+    function rx(x) { return p + x * s; }
+    function ry(y) { return p + y * s; }
+
+    // Ice fill
+    fCanvas.add(new fabric.Rect({
+      left: p + bw/2, top: p + bw/2,
+      width: rinkW - bw, height: rinkH - bw,
+      rx: cr, ry: cr,
+      fill: '#f0f4f8', stroke: 'transparent', strokeWidth: 0,
+      selectable: false, evented: false
+    }));
+
+    // Center red line
+    var lineTop = p + bw;
+    var lineBot = p + rinkH - bw;
+    fCanvas.add(new fabric.Line(
+      [rx(100), lineTop, rx(100), lineBot],
+      { stroke: rinkRed, strokeWidth: 1 * s, selectable: false, evented: false }
+    ));
+
+    // Blue lines
+    fCanvas.add(new fabric.Line(
+      [rx(75), lineTop, rx(75), lineBot],
+      { stroke: rinkBlue, strokeWidth: 1 * s, selectable: false, evented: false }
+    ));
+    fCanvas.add(new fabric.Line(
+      [rx(125), lineTop, rx(125), lineBot],
+      { stroke: rinkBlue, strokeWidth: 1 * s, selectable: false, evented: false }
+    ));
+
+    // Border
+    fCanvas.add(new fabric.Rect({
+      left: p + bw/2, top: p + bw/2,
+      width: rinkW - bw, height: rinkH - bw,
+      rx: cr, ry: cr,
+      fill: 'transparent', stroke: '#333333', strokeWidth: bw,
+      selectable: false, evented: false
+    }));
+
+    // Render drill items
+    (drill.items || []).forEach(function(item) {
+      if (item.kind === 'line') {
+        var start = { x: rx(item.startX), y: ry(item.startY) };
+        var end = { x: rx(item.endX), y: ry(item.endY) };
+        var dx = end.x - start.x;
+        var dy = end.y - start.y;
+        var len = Math.sqrt(dx * dx + dy * dy);
+        var arrowLen = CONFIG.ARROW_SIZE * s;
+        var shortenEnd = len > arrowLen ? {
+          x: end.x - (dx / len) * arrowLen,
+          y: end.y - (dy / len) * arrowLen
+        } : end;
+        var sw = Math.max(0.8, 1 * s);
+
+        if (item.lineType === 'skate') {
+          fCanvas.add(new fabric.Line(
+            [start.x, start.y, shortenEnd.x, shortenEnd.y],
+            { stroke: item.colour, strokeWidth: sw, selectable: false, evented: false }
+          ));
+        } else if (item.lineType === 'pass') {
+          fCanvas.add(new fabric.Line(
+            [start.x, start.y, shortenEnd.x, shortenEnd.y],
+            { stroke: item.colour, strokeWidth: sw, strokeDashArray: [3*s, 3*s], selectable: false, evented: false }
+          ));
+        } else if (item.lineType === 'shoot') {
+          fCanvas.add(new fabric.Line(
+            [start.x, start.y, shortenEnd.x, shortenEnd.y],
+            { stroke: item.colour, strokeWidth: sw, strokeDashArray: [6*s, 3*s], selectable: false, evented: false }
+          ));
+        } else if (item.lineType === 'puck') {
+          // Simplified squiggly as a straight line with different dash
+          fCanvas.add(new fabric.Line(
+            [start.x, start.y, shortenEnd.x, shortenEnd.y],
+            { stroke: item.colour, strokeWidth: sw, strokeDashArray: [1.5*s, 1.5*s], selectable: false, evented: false }
+          ));
+        }
+
+        // Arrowhead
+        if (len > 2) {
+          var angle = Math.atan2(end.y - start.y, end.x - start.x);
+          var aSize = CONFIG.ARROW_SIZE * s;
+          var tip = end;
+          var p1 = { x: tip.x - aSize * Math.cos(angle - Math.PI/6), y: tip.y - aSize * Math.sin(angle - Math.PI/6) };
+          var p2 = { x: tip.x - aSize * Math.cos(angle + Math.PI/6), y: tip.y - aSize * Math.sin(angle + Math.PI/6) };
+          fCanvas.add(new fabric.Polygon(
+            [tip, p1, p2],
+            { fill: item.colour, stroke: item.colour, strokeWidth: 0.3 * s, selectable: false, evented: false }
+          ));
+        }
+      } else if (item.kind === 'object') {
+        var px = rx(item.x);
+        var py = ry(item.y);
+
+        if (item.objectType === 'text') {
+          // Skip text in thumbnails -- too small to read
+        } else if (item.objectType === 'forward' || item.objectType === 'defense' || item.objectType === 'goalie') {
+          var pr = CONFIG.PLAYER_RADIUS * s;
+          fCanvas.add(new fabric.Circle({
+            left: px, top: py, radius: pr,
+            fill: 'transparent', stroke: item.colour || '#d32f2f',
+            strokeWidth: Math.max(0.5, 0.7 * s),
+            originX: 'center', originY: 'center',
+            selectable: false, evented: false
+          }));
+          // Player letter
+          var letter = item.objectType === 'forward' ? 'F' : (item.objectType === 'defense' ? 'D' : 'G');
+          fCanvas.add(new fabric.Text(letter + (item.index || ''), {
+            left: px, top: py,
+            fontSize: pr * 1.0,
+            fontWeight: 'bold',
+            fontFamily: 'system-ui, sans-serif',
+            fill: item.colour || '#d32f2f',
+            originX: 'center', originY: 'center',
+            selectable: false, evented: false
+          }));
+        } else if (item.objectType === 'net') {
+          var nw = CONFIG.NET_HEIGHT * s;
+          var nh = CONFIG.NET_WIDTH * s;
+          fCanvas.add(new fabric.Rect({
+            left: px - nw/2, top: py - nh/2,
+            width: nw, height: nh,
+            fill: '#cccccc', stroke: item.colour || '#d32f2f',
+            strokeWidth: Math.max(0.3, 0.4 * s),
+            selectable: false, evented: false
+          }));
+        } else if (item.objectType === 'pylon') {
+          var pSize = CONFIG.PYLON_SIZE * s;
+          var ph = pSize * Math.sqrt(3) / 2;
+          fCanvas.add(new fabric.Triangle({
+            left: px, top: py,
+            width: pSize, height: ph,
+            fill: item.colour || '#f57c00',
+            originX: 'center', originY: 'center',
+            selectable: false, evented: false
+          }));
+        } else if (item.objectType === 'puck1' || item.objectType === 'puck5') {
+          var puckR = CONFIG.PUCK_RADIUS * s;
+          if (item.objectType === 'puck5') puckR *= 1.3;
+          fCanvas.add(new fabric.Circle({
+            left: px, top: py, radius: puckR,
+            fill: item.colour || '#212121',
+            originX: 'center', originY: 'center',
+            selectable: false, evented: false
+          }));
+        }
+      }
+    });
+
+    fCanvas.renderAll();
+    var dataUrl = fCanvas.toDataURL({ format: 'png' });
+
+    // Cache it
+    thumbnailCache[cacheKey] = dataUrl;
+
+    // Cleanup
+    fCanvas.dispose();
+
+    callback(dataUrl);
+  }
+
+  function generateVisibleThumbnails() {
+    var lib = loadLibrary();
+    var thumbEls = document.querySelectorAll('.drill-thumb[data-drill-id]');
+    var index = 0;
+
+    function processNext() {
+      if (index >= thumbEls.length) return;
+      var el = thumbEls[index];
+      index++;
+      var drillId = el.dataset.drillId;
+      var drill = lib.drills.find(function(d) { return d.id === drillId; });
+      if (drill && drill.items && drill.items.length > 0 && !el.querySelector('img')) {
+        generateThumbnail(drill, function(dataUrl) {
+          el.innerHTML = '<img src="' + dataUrl + '" alt="Drill preview" />';
+          // Process next after a small delay to avoid blocking UI
+          setTimeout(processNext, 10);
+        });
+      } else {
+        // Skip to next immediately
+        processNext();
+      }
+    }
+
+    // Start after a short delay so the DOM has settled
+    setTimeout(processNext, 50);
   }
 
   // ==================== PRACTICE PLAN ====================
