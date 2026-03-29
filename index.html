@@ -601,6 +601,14 @@ body {
   overflow: hidden;
 }
 
+.fav-btn {
+  background: none; border: none; cursor: pointer; font-size: 16px;
+  color: var(--text-secondary); padding: 0 4px; transition: color 0.15s;
+  float: right;
+}
+.fav-btn.active { color: #f9a825; }
+.fav-btn:hover { color: #f9a825; }
+
 .drill-card-title {
   font-size: 13px;
   font-weight: 600;
@@ -2117,6 +2125,8 @@ html[data-theme="dark"] {
       + (hasItems ? '' : '<span class="thumb-empty">No items</span>')
       + '</div>';
     html += '<div class="drill-card-info">';
+    html += '<button data-drill-fav="' + drill.id + '" class="fav-btn ' + ((drill.tags || []).includes('Favourite') ? 'active' : '') + '" title="Toggle favourite">'
+      + ((drill.tags || []).includes('Favourite') ? '★' : '☆') + '</button>';
     html += '<div class="drill-card-title">' + escHtml(drill.title || 'Untitled Drill') + (isActive ? ' (active)' : '') + '</div>';
     if (drill.description) {
       html += '<div class="drill-card-desc">' + escHtml(drill.description) + '</div>';
@@ -2132,6 +2142,7 @@ html[data-theme="dark"] {
     html += '<button class="open-action" data-drill-open="' + drill.id + '">Open</button>';
     html += '<button data-drill-dup="' + drill.id + '">Duplicate</button>';
     html += '<button data-drill-export="' + drill.id + '">Export</button>';
+    html += '<button data-drill-share="' + drill.id + '">Share</button>';
     html += '<button class="danger-action" data-drill-del="' + drill.id + '">'
       + (isDeletePending ? 'Confirm?' : 'Delete') + '</button>';
     html += '</div></div>';
@@ -3106,6 +3117,17 @@ html[data-theme="dark"] {
 
     saveHistoryState();
     updateLastUpdated();
+
+    // Warn before navigating away if there are drill items on canvas
+    window.addEventListener('beforeunload', function(e) {
+      try {
+        const items = serializeDrill();
+        if (items && items.length > 0) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
+      } catch(err) {}
+    });
   }
 
   function restoreFromLibrary() {
@@ -4628,7 +4650,30 @@ html[data-theme="dark"] {
     document.getElementById('library-list').addEventListener('click', function(e) {
       const btn = e.target.closest('button');
       if (!btn) return;
-      if (btn.dataset.drillOpen) {
+      if (btn.dataset.drillShare) {
+        const lib = loadLibrary();
+        const drill = lib.drills.find(d => d.id === btn.dataset.drillShare);
+        if (drill) {
+          const data = { v: 2, t: drill.title, d: drill.description, i: drill.items || [] };
+          const json = JSON.stringify(data);
+          const compressed = LZString.compressToEncodedURIComponent(json);
+          const url = window.location.origin + window.location.pathname + '#drill=' + compressed;
+          copyAndShowQR(url, btn);
+        }
+      } else if (btn.dataset.drillFav) {
+        const lib = loadLibrary();
+        const drill = lib.drills.find(d => d.id === btn.dataset.drillFav);
+        if (drill) {
+          const idx = drill.tags.indexOf('Favourite');
+          if (idx >= 0) { drill.tags.splice(idx, 1); }
+          else { drill.tags.push('Favourite'); }
+          if (!lib.categories.includes('Favourite') && drill.tags.includes('Favourite')) {
+            lib.categories.push('Favourite');
+          }
+          saveLibrary(lib);
+          renderLibrary();
+        }
+      } else if (btn.dataset.drillOpen) {
         openDrill(btn.dataset.drillOpen);
       } else if (btn.dataset.drillDup) {
         duplicateDrill(btn.dataset.drillDup);
@@ -4845,6 +4890,13 @@ html[data-theme="dark"] {
   // ==================== KEYBOARD ====================
   function setupKeyboard() {
     document.addEventListener('keydown', (e) => {
+      // ? — toggle shortcuts panel
+      if (e.key === '?' && !e.target.matches('input, textarea, select')) {
+        const modal = document.getElementById('shortcuts-modal');
+        modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        return;
+      }
+
       // ESC — deselect tool
       if (e.key === 'Escape') {
         if (document.getElementById('app').classList.contains('fullscreen-mode')) {
@@ -5134,5 +5186,17 @@ html[data-theme="dark"] {
   document.addEventListener('DOMContentLoaded', init);
 })();
 </script>
+<div id="shortcuts-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;" onclick="this.style.display='none'">
+  <div style="background:var(--surface);border-radius:var(--radius);padding:24px;max-width:400px;width:90%;max-height:80vh;overflow:auto;" onclick="event.stopPropagation()">
+    <h3 style="font-size:16px;margin-bottom:12px;">Keyboard Shortcuts</h3>
+    <table style="width:100%;font-size:13px;border-collapse:collapse;">
+      <tr><td style="padding:4px 8px;"><kbd style="background:var(--input-bg);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">ESC</kbd></td><td>Deselect tool / Exit fullscreen</td></tr>
+      <tr><td style="padding:4px 8px;"><kbd style="background:var(--input-bg);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Ctrl+Z</kbd></td><td>Undo</td></tr>
+      <tr><td style="padding:4px 8px;"><kbd style="background:var(--input-bg);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Ctrl+Y</kbd></td><td>Redo</td></tr>
+      <tr><td style="padding:4px 8px;"><kbd style="background:var(--input-bg);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">?</kbd></td><td>Toggle this panel</td></tr>
+    </table>
+    <button class="action-btn" style="margin-top:12px;width:100%;" onclick="document.getElementById('shortcuts-modal').style.display='none'">Close</button>
+  </div>
+</div>
 </body>
 </html>
