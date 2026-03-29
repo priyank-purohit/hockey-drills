@@ -123,7 +123,7 @@ body {
 #app.fullscreen-mode .tab-bar,
 #app.fullscreen-mode .breadcrumb-bar,
 #app.fullscreen-mode #text-input-bar,
-#app.fullscreen-mode .drill-tags {
+#app.fullscreen-mode .tags-section {
   display: none !important;
 }
 #app.fullscreen-mode {
@@ -2092,34 +2092,6 @@ html[data-theme="dark"] {
       });
     });
 
-    // Drill card action buttons
-    container.querySelectorAll('[data-drill-open]').forEach(btn => {
-      btn.addEventListener('click', () => openDrill(btn.dataset.drillOpen));
-    });
-    container.querySelectorAll('[data-drill-dup]').forEach(btn => {
-      btn.addEventListener('click', () => duplicateDrill(btn.dataset.drillDup));
-    });
-    container.querySelectorAll('[data-drill-del]').forEach(btn => {
-      btn.addEventListener('click', () => deleteDrill(btn.dataset.drillDel));
-    });
-    container.querySelectorAll('[data-drill-export]').forEach(btn => {
-      let pending = false;
-      const origText = btn.textContent;
-      btn.addEventListener('click', () => {
-        if (!pending) {
-          pending = true;
-          btn.textContent = '\u26A0 Confirm?';
-          btn.classList.add('danger');
-          setTimeout(() => { if (pending) { pending = false; btn.textContent = origText; btn.classList.remove('danger'); } }, 3000);
-        } else {
-          pending = false;
-          btn.textContent = origText;
-          btn.classList.remove('danger');
-          exportDrillJSON(btn.dataset.drillExport);
-        }
-      });
-    });
-
     // Generate thumbnails lazily after DOM is updated
     generateVisibleThumbnails();
   }
@@ -2480,67 +2452,6 @@ html[data-theme="dark"] {
     html += '<div class="practice-total">Total: ' + totalTimeStr + '</div>';
 
     container.innerHTML = html;
-
-    // Attach event listeners
-    container.querySelectorAll('[data-practice-duration]').forEach(input => {
-      input.addEventListener('change', function() {
-        const i = parseInt(this.dataset.practiceDuration);
-        plan.entries[i].duration = parseInt(this.value) || 0;
-        savePracticePlan();
-        renderPracticePlan();
-      });
-    });
-
-    container.querySelectorAll('[data-practice-notes]').forEach(input => {
-      input.addEventListener('input', function() {
-        const i = parseInt(this.dataset.practiceNotes);
-        plan.entries[i].notes = this.value;
-        savePracticePlan();
-      });
-    });
-
-    container.querySelectorAll('[data-practice-label]').forEach(input => {
-      input.addEventListener('input', function() {
-        const i = parseInt(this.dataset.practiceLabel);
-        plan.entries[i].label = this.value;
-        savePracticePlan();
-      });
-    });
-
-    container.querySelectorAll('[data-practice-up]').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const i = parseInt(this.dataset.practiceUp);
-        if (i > 0) {
-          const temp = plan.entries[i];
-          plan.entries[i] = plan.entries[i - 1];
-          plan.entries[i - 1] = temp;
-          savePracticePlan();
-          renderPracticePlan();
-        }
-      });
-    });
-
-    container.querySelectorAll('[data-practice-down]').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const i = parseInt(this.dataset.practiceDown);
-        if (i < plan.entries.length - 1) {
-          const temp = plan.entries[i];
-          plan.entries[i] = plan.entries[i + 1];
-          plan.entries[i + 1] = temp;
-          savePracticePlan();
-          renderPracticePlan();
-        }
-      });
-    });
-
-    container.querySelectorAll('[data-practice-remove]').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const i = parseInt(this.dataset.practiceRemove);
-        plan.entries.splice(i, 1);
-        savePracticePlan();
-        renderPracticePlan();
-      });
-    });
   }
 
   function exportPracticePDF() {
@@ -2770,6 +2681,63 @@ html[data-theme="dark"] {
       }
       savePracticePlan();
       renderPracticePlan();
+    });
+
+    // Event delegation for practice drills list (avoids re-attaching on every render)
+    const practiceList = document.getElementById('practice-drills-list');
+
+    practiceList.addEventListener('change', function(e) {
+      const t = e.target;
+      if (t.dataset.practiceDuration !== undefined) {
+        const idx = parseInt(t.dataset.practiceDuration);
+        getActivePlan().entries[idx].duration = parseInt(t.value) || 0;
+        savePracticePlan();
+        renderPracticePlan();
+      } else if (t.dataset.practiceNotes !== undefined) {
+        const idx = parseInt(t.dataset.practiceNotes);
+        getActivePlan().entries[idx].notes = t.value;
+        savePracticePlan();
+      } else if (t.dataset.practiceLabel !== undefined) {
+        const idx = parseInt(t.dataset.practiceLabel);
+        getActivePlan().entries[idx].label = t.value;
+        savePracticePlan();
+      }
+    });
+
+    practiceList.addEventListener('input', function(e) {
+      const t = e.target;
+      if (t.dataset.practiceNotes !== undefined) {
+        const idx = parseInt(t.dataset.practiceNotes);
+        getActivePlan().entries[idx].notes = t.value;
+        savePracticePlan();
+      } else if (t.dataset.practiceLabel !== undefined) {
+        const idx = parseInt(t.dataset.practiceLabel);
+        getActivePlan().entries[idx].label = t.value;
+        savePracticePlan();
+      }
+    });
+
+    practiceList.addEventListener('click', function(e) {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      if (btn.dataset.practiceUp !== undefined) {
+        const idx = parseInt(btn.dataset.practiceUp);
+        const entries = getActivePlan().entries;
+        if (idx > 0) { [entries[idx-1], entries[idx]] = [entries[idx], entries[idx-1]]; }
+        savePracticePlan();
+        renderPracticePlan();
+      } else if (btn.dataset.practiceDown !== undefined) {
+        const idx = parseInt(btn.dataset.practiceDown);
+        const entries = getActivePlan().entries;
+        if (idx < entries.length - 1) { [entries[idx], entries[idx+1]] = [entries[idx+1], entries[idx]]; }
+        savePracticePlan();
+        renderPracticePlan();
+      } else if (btn.dataset.practiceRemove !== undefined) {
+        const idx = parseInt(btn.dataset.practiceRemove);
+        getActivePlan().entries.splice(idx, 1);
+        savePracticePlan();
+        renderPracticePlan();
+      }
     });
   }
 
@@ -3399,6 +3367,8 @@ html[data-theme="dark"] {
     }
 
     cancelLineDrawing();
+    stepItems = null;
+    stepIndex = 0;
     activeTool = tool;
 
     // Reset colour to tool default
@@ -3435,6 +3405,8 @@ html[data-theme="dark"] {
       disableMoveMode();
     }
     cancelLineDrawing();
+    stepItems = null;
+    stepIndex = 0;
     activeTool = null;
     activeColour = null;
     document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
@@ -3453,6 +3425,7 @@ html[data-theme="dark"] {
   function setupColourPicker() {
     document.querySelectorAll('.colour-swatch').forEach(swatch => {
       swatch.addEventListener('click', () => {
+        if (!activeTool) return; // Don't allow colour selection without an active tool
         activeColour = swatch.dataset.colour;
         document.querySelectorAll('.colour-swatch').forEach(s => s.classList.remove('active'));
         swatch.classList.add('active');
@@ -4507,6 +4480,40 @@ html[data-theme="dark"] {
       if (!file) return;
       importLibraryJSON(file);
       e.target.value = '';
+    });
+
+    // Event delegation for drill card action buttons (avoids re-attaching on every render)
+    document.getElementById('library-list').addEventListener('click', function(e) {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      if (btn.dataset.drillOpen) {
+        openDrill(btn.dataset.drillOpen);
+      } else if (btn.dataset.drillDup) {
+        duplicateDrill(btn.dataset.drillDup);
+      } else if (btn.dataset.drillDel) {
+        deleteDrill(btn.dataset.drillDel);
+      } else if (btn.dataset.drillExport) {
+        if (!btn.dataset.pending) {
+          btn.dataset.pending = 'true';
+          btn.dataset.origText = btn.textContent;
+          btn.textContent = '\u26A0 Confirm?';
+          btn.classList.add('danger');
+          setTimeout(() => {
+            if (btn.dataset.pending) {
+              delete btn.dataset.pending;
+              btn.textContent = btn.dataset.origText || 'Export';
+              delete btn.dataset.origText;
+              btn.classList.remove('danger');
+            }
+          }, 3000);
+        } else {
+          delete btn.dataset.pending;
+          btn.textContent = btn.dataset.origText || 'Export';
+          delete btn.dataset.origText;
+          btn.classList.remove('danger');
+          exportDrillJSON(btn.dataset.drillExport);
+        }
+      }
     });
   }
 
