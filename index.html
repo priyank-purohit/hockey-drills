@@ -824,6 +824,12 @@ body {
         <button class="tool-btn" data-tool="pylon" title="Pylon/cone">&#9650; Pylon</button>
         <button class="tool-btn" data-tool="puck1" title="Single puck">&#9679; Puck</button>
         <button class="tool-btn" data-tool="puck5" title="5 pucks">&#9679;&#215;5</button>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- Annotate -->
+        <span class="toolbar-label">Annotate</span>
+        <button class="tool-btn" data-tool="text" title="Add text label">A Text</button>
       </div>
 
       <!-- Colours + Actions -->
@@ -862,6 +868,10 @@ body {
         <input type="file" id="file-bg" accept="image/*" style="display:none" />
         <input type="file" id="file-json" accept=".json,application/json" style="display:none" />
       </div>
+    </div>
+
+    <div id="text-input-bar" style="display:none;margin-bottom:8px;">
+      <input type="text" id="annotation-text" placeholder="Type annotation text, then click on rink to place..." style="width:100%;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:var(--font);font-size:14px;" />
     </div>
 
     <!-- Canvas -->
@@ -947,7 +957,8 @@ body {
       net: '#d32f2f',
       pylon: '#f57c00',
       puck1: '#212121',
-      puck5: '#212121'
+      puck5: '#212121',
+      text: '#212121'
     },
 
     // Undo/redo
@@ -965,7 +976,7 @@ body {
 
     // Line types
     LINE_TOOLS: ['skate', 'puck', 'pass', 'shoot'],
-    OBJECT_TOOLS: ['forward', 'defense', 'goalie', 'net', 'pylon', 'puck1', 'puck5'],
+    OBJECT_TOOLS: ['forward', 'defense', 'goalie', 'net', 'pylon', 'puck1', 'puck5', 'text'],
 
     // Arrow size
     ARROW_SIZE: 4,
@@ -2201,6 +2212,15 @@ body {
       enableMoveMode();
     }
 
+    // Show/hide text input bar
+    const textBar = document.getElementById('text-input-bar');
+    if (tool === 'text') {
+      textBar.style.display = 'block';
+      document.getElementById('annotation-text').focus();
+    } else {
+      textBar.style.display = 'none';
+    }
+
     updateStatus();
   }
 
@@ -2213,6 +2233,7 @@ body {
     activeColour = null;
     document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.colour-swatch').forEach(s => s.classList.remove('active'));
+    document.getElementById('text-input-bar').style.display = 'none';
     updateStatus();
   }
 
@@ -2510,6 +2531,11 @@ body {
       case 'puck5':
         obj = placeObject('puck5', logPos, colour);
         break;
+      case 'text':
+        const annotationText = document.getElementById('annotation-text').value.trim();
+        if (!annotationText) return;
+        obj = placeObject('text', logPos, colour, undefined, annotationText);
+        break;
     }
 
     if (obj) {
@@ -2521,7 +2547,7 @@ body {
   }
 
   // logPos is in LOGICAL coordinates (0-200 x 0-85)
-  function placeObject(type, logPos, colour, index) {
+  function placeObject(type, logPos, colour, index, extra) {
     const s = scaleFactor;
     const p = CONFIG.RINK_PADDING;
     const vc = getViewConfig();
@@ -2550,6 +2576,9 @@ body {
       case 'puck5':
         obj = createMultiPuck(colour, pixPos, s);
         break;
+      case 'text':
+        obj = createTextAnnotation(extra, colour, pixPos, s);
+        break;
     }
 
     if (obj) {
@@ -2558,6 +2587,7 @@ body {
       obj._colour = colour;
       obj._objectType = type;
       if (index !== undefined) obj._playerIndex = index;
+      if (type === 'text') obj._annotationText = extra;
     }
     return obj;
   }
@@ -2698,6 +2728,20 @@ body {
     return group;
   }
 
+  function createTextAnnotation(text, colour, pos, s) {
+    const t = new fabric.Text(text, {
+      left: pos.x, top: pos.y,
+      fontSize: 3.5 * s,
+      fontWeight: '500',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fill: colour,
+      originX: 'center', originY: 'center',
+      selectable: false, evented: true,
+      _drillType: 'text'
+    });
+    return t;
+  }
+
   // ==================== MOVE MODE ====================
   function enableMoveMode() {
     canvas.getObjects().forEach(obj => {
@@ -2795,6 +2839,7 @@ body {
           colour: obj._colour
         };
         if (obj._playerIndex !== undefined) entry.index = obj._playerIndex;
+        if (obj._objectType === 'text') entry.text = obj._annotationText;
         items.push(entry);
       }
     });
@@ -2817,7 +2862,8 @@ body {
         const obj = placeObject(item.objectType,
           { x: item.x, y: item.y },
           item.colour,
-          item.index);
+          item.index,
+          item.text);
         if (obj) canvas.add(obj);
       }
     });
@@ -3174,7 +3220,8 @@ body {
         move: 'Move',
         skate: 'Skating Line', puck: 'Puck Line', pass: 'Passing Line', shoot: 'Shooting Line',
         forward: 'Forward', defense: 'Defenseman', goalie: 'Goalie',
-        net: 'Hockey Net', pylon: 'Pylon', puck1: 'Puck', puck5: 'Multi-Puck'
+        net: 'Hockey Net', pylon: 'Pylon', puck1: 'Puck', puck5: 'Multi-Puck',
+        text: 'Text Annotation'
       };
       el.textContent = `Tool: ${names[activeTool] || activeTool}`;
     }
