@@ -116,6 +116,32 @@ body {
   color: var(--text);
 }
 
+/* ========== Fullscreen Mode ========== */
+#app.fullscreen-mode .drill-header,
+#app.fullscreen-mode .toolbar,
+#app.fullscreen-mode .status-bar,
+#app.fullscreen-mode .tab-bar,
+#app.fullscreen-mode .breadcrumb-bar,
+#app.fullscreen-mode #text-input-bar,
+#app.fullscreen-mode .drill-tags {
+  display: none !important;
+}
+#app.fullscreen-mode {
+  max-width: 100%;
+  padding: 4px 2.5%;
+}
+#app.fullscreen-mode .canvas-container-wrapper {
+  margin-bottom: 0;
+}
+#app.fullscreen-mode .fullscreen-exit-bar {
+  display: flex;
+}
+.fullscreen-exit-bar {
+  display: none;
+  justify-content: center;
+  padding: 8px;
+}
+
 /* ========== Tab Content ========== */
 .tab-content {
   display: none;
@@ -897,6 +923,7 @@ body {
         <button class="action-btn" id="btn-export-pdf" title="Export PDF">&#128196; PDF</button>
         <button class="action-btn" id="btn-share" title="Share drill via link">&#128279; Share</button>
         <button class="action-btn" id="btn-upload-bg" title="Upload rink background">&#128247; BG</button>
+        <button class="action-btn" id="btn-fullscreen" title="Fullscreen rink">&#x26F6; Full</button>
         <input type="file" id="file-bg" accept="image/*" style="display:none" />
         <input type="file" id="file-json" accept=".json,application/json" style="display:none" />
       </div>
@@ -919,6 +946,9 @@ body {
     </div>
 
     <!-- Canvas -->
+    <div class="fullscreen-exit-bar">
+      <button class="action-btn" id="btn-exit-fullscreen">&#x2715; Exit Fullscreen</button>
+    </div>
     <div class="canvas-container-wrapper" id="canvas-wrapper">
       <div class="line-preview-hint" id="line-hint">Click on rink to set end point</div>
       <canvas id="rink-canvas"></canvas>
@@ -2292,7 +2322,7 @@ body {
       addBreakToPractice();
     });
 
-    document.getElementById('btn-export-practice-pdf').addEventListener('click', exportPracticePDF);
+    confirmAction('btn-export-practice-pdf', exportPracticePDF);
     document.getElementById('btn-share-plan').addEventListener('click', sharePracticePlan);
 
     document.getElementById('practice-title').addEventListener('input', function() {
@@ -3754,6 +3784,26 @@ body {
   }
 
   // ==================== ACTIONS ====================
+  // Double-tap confirm helper for action buttons
+  function confirmAction(btnId, action) {
+    const btn = document.getElementById(btnId);
+    let pending = false;
+    const origHTML = btn.innerHTML;
+    btn.addEventListener('click', () => {
+      if (!pending) {
+        pending = true;
+        btn.textContent = '\u26A0 Confirm?';
+        btn.classList.add('danger');
+        setTimeout(() => { if (pending) { pending = false; btn.innerHTML = origHTML; btn.classList.remove('danger'); } }, 3000);
+      } else {
+        pending = false;
+        btn.innerHTML = origHTML;
+        btn.classList.remove('danger');
+        action();
+      }
+    });
+  }
+
   function setupActions() {
     document.getElementById('btn-undo').addEventListener('click', undo);
     document.getElementById('btn-redo').addEventListener('click', redo);
@@ -3797,45 +3847,23 @@ body {
       openDrill(drill.id);
     });
 
-    // Save JSON — double-tap confirm
-    const saveBtn = document.getElementById('btn-save-json');
-    let savePending = false;
-    saveBtn.addEventListener('click', () => {
-      if (!savePending) {
-        savePending = true;
-        saveBtn.textContent = '⚠ Confirm?';
-        saveBtn.classList.add('danger');
-        setTimeout(() => { if (savePending) { savePending = false; saveBtn.innerHTML = '&#128190; Save'; saveBtn.classList.remove('danger'); } }, 3000);
-      } else {
-        savePending = false;
-        saveBtn.innerHTML = '&#128190; Save';
-        saveBtn.classList.remove('danger');
-        exportJSON();
-      }
-    });
-
+    confirmAction('btn-save-json', exportJSON);
     document.getElementById('btn-load-json').addEventListener('click', () => {
       document.getElementById('file-json').click();
     });
     document.getElementById('file-json').addEventListener('change', importJSON);
-
-    // PDF export — double-tap confirm
-    const pdfBtn = document.getElementById('btn-export-pdf');
-    let pdfPending = false;
-    pdfBtn.addEventListener('click', () => {
-      if (!pdfPending) {
-        pdfPending = true;
-        pdfBtn.textContent = '⚠ Confirm?';
-        pdfBtn.classList.add('danger');
-        setTimeout(() => { if (pdfPending) { pdfPending = false; pdfBtn.innerHTML = '&#128196; PDF'; pdfBtn.classList.remove('danger'); } }, 3000);
-      } else {
-        pdfPending = false;
-        pdfBtn.innerHTML = '&#128196; PDF';
-        pdfBtn.classList.remove('danger');
-        exportPDF();
-      }
-    });
+    confirmAction('btn-export-pdf', exportPDF);
     document.getElementById('btn-share').addEventListener('click', shareDrill);
+
+    // Fullscreen toggle
+    document.getElementById('btn-fullscreen').addEventListener('click', () => {
+      document.getElementById('app').classList.add('fullscreen-mode');
+      setTimeout(() => resizeCanvas(), 50);
+    });
+    document.getElementById('btn-exit-fullscreen').addEventListener('click', () => {
+      document.getElementById('app').classList.remove('fullscreen-mode');
+      setTimeout(() => resizeCanvas(), 50);
+    });
 
     document.getElementById('btn-upload-bg').addEventListener('click', () => {
       document.getElementById('file-bg').click();
@@ -3878,9 +3906,8 @@ body {
       renderLibrary();
     });
 
-    document.getElementById('btn-export-library').addEventListener('click', exportLibraryJSON);
-
-    document.getElementById('btn-print-cards').addEventListener('click', exportPracticeCards);
+    confirmAction('btn-export-library', exportLibraryJSON);
+    confirmAction('btn-print-cards', exportPracticeCards);
 
     document.getElementById('btn-import-library').addEventListener('click', () => {
       document.getElementById('file-library-import').click();
@@ -4087,6 +4114,10 @@ body {
     document.addEventListener('keydown', (e) => {
       // ESC — deselect tool
       if (e.key === 'Escape') {
+        if (document.getElementById('app').classList.contains('fullscreen-mode')) {
+          document.getElementById('app').classList.remove('fullscreen-mode');
+          setTimeout(() => resizeCanvas(), 50);
+        }
         deselectTool();
         return;
       }
