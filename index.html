@@ -644,6 +644,98 @@ body {
   font-size: 13px;
 }
 
+/* ========== Practice Plan ========== */
+.practice-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+}
+
+.practice-entry-title {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 120px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.practice-entry input[type="number"] {
+  width: 60px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  text-align: center;
+}
+
+.practice-entry input[type="text"] {
+  flex: 1;
+  min-width: 80px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+}
+
+.practice-entry-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.practice-entry-actions button {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.practice-entry-actions button:hover {
+  background: var(--surface-hover);
+}
+
+.practice-entry-actions button.danger-action:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.practice-total {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.practice-empty {
+  text-align: center;
+  padding: 24px 14px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
 /* ========== Responsive ========== */
 
 /* Tablet (601-1024px) */
@@ -675,6 +767,7 @@ body {
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="editor">Editor</button>
     <button class="tab-btn" data-tab="library">Library</button>
+    <button class="tab-btn" data-tab="practice">Practice Plan</button>
   </div>
   <div class="breadcrumb-bar" id="breadcrumb">
     Editing: <span class="breadcrumb-title" id="breadcrumb-title">Untitled Drill</span>
@@ -782,6 +875,26 @@ body {
       <input type="file" id="file-library-import" accept=".json,application/json" style="display:none" />
     </div>
   </div>
+
+  <!-- ==================== PRACTICE PLAN TAB ==================== -->
+  <div class="tab-content" id="tab-practice">
+    <div class="practice-plan">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h2 style="font-size:18px;font-weight:600;">Practice Plan</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="action-btn" id="btn-export-practice-pdf">&#128196; Export PDF</button>
+        </div>
+      </div>
+      <input type="text" id="practice-title" placeholder="Practice Plan Title (e.g. Tuesday Practice)" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:var(--font);font-size:16px;font-weight:600;margin-bottom:12px;" />
+      <div id="practice-drills-list" style="margin-bottom:12px;"></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="practice-add-drill" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:var(--font);font-size:13px;">
+          <option value="">Select a drill to add...</option>
+        </select>
+        <button class="action-btn" id="btn-add-to-practice">+ Add Drill</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -864,7 +977,13 @@ body {
       const raw = localStorage.getItem(LIBRARY_KEY);
       if (raw) {
         const lib = JSON.parse(raw);
-        if (lib && lib.version === 3) return lib;
+        if (lib && lib.version === 3) {
+          // Restore practice plan if saved
+          if (lib.practicePlan) {
+            practicePlan = lib.practicePlan;
+          }
+          return lib;
+        }
       }
     } catch (e) { /* corrupted */ }
 
@@ -920,6 +1039,7 @@ body {
 
   function saveLibrary(lib) {
     try {
+      lib.practicePlan = practicePlan;
       localStorage.setItem(LIBRARY_KEY, JSON.stringify(lib));
     } catch (e) { /* storage full — silently fail */ }
   }
@@ -1404,6 +1524,284 @@ body {
     return div.innerHTML;
   }
 
+  // ==================== PRACTICE PLAN ====================
+  function populateDrillSelect() {
+    const lib = loadLibrary();
+    const select = document.getElementById('practice-add-drill');
+    // Keep the first placeholder option, remove the rest
+    while (select.options.length > 1) select.remove(1);
+    lib.drills.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.title || 'Untitled Drill';
+      select.appendChild(opt);
+    });
+  }
+
+  function addDrillToPractice(drillId) {
+    if (!drillId) return;
+    practicePlan.entries.push({ drillId: drillId, duration: 10, notes: '' });
+    savePracticePlan();
+    renderPracticePlan();
+  }
+
+  function savePracticePlan() {
+    practicePlan.title = document.getElementById('practice-title').value;
+    const lib = loadLibrary();
+    saveLibrary(lib);
+  }
+
+  function renderPracticePlan() {
+    const container = document.getElementById('practice-drills-list');
+    const lib = loadLibrary();
+
+    // Restore title into input
+    document.getElementById('practice-title').value = practicePlan.title || '';
+
+    if (practicePlan.entries.length === 0) {
+      container.innerHTML = '<div class="practice-empty">No drills added yet. Select a drill below and click "+ Add Drill".</div>';
+      return;
+    }
+
+    let html = '';
+    let totalMinutes = 0;
+
+    practicePlan.entries.forEach((entry, idx) => {
+      const drill = lib.drills.find(d => d.id === entry.drillId);
+      const title = drill ? (drill.title || 'Untitled Drill') : '(Deleted Drill)';
+      totalMinutes += (entry.duration || 0);
+
+      html += '<div class="practice-entry" data-index="' + idx + '">';
+      html += '<span style="font-size:12px;color:var(--text-secondary);font-weight:600;min-width:24px;">' + (idx + 1) + '.</span>';
+      html += '<span class="practice-entry-title">' + escHtml(title) + '</span>';
+      html += '<input type="number" min="0" max="999" value="' + (entry.duration || 0) + '" data-practice-duration="' + idx + '" title="Duration (minutes)" /> <span style="font-size:11px;color:var(--text-secondary);">min</span>';
+      html += '<input type="text" value="' + escHtml(entry.notes || '') + '" placeholder="Notes..." data-practice-notes="' + idx + '" />';
+      html += '<div class="practice-entry-actions">';
+      if (idx > 0) {
+        html += '<button data-practice-up="' + idx + '" title="Move up">&#9650;</button>';
+      }
+      if (idx < practicePlan.entries.length - 1) {
+        html += '<button data-practice-down="' + idx + '" title="Move down">&#9660;</button>';
+      }
+      html += '<button class="danger-action" data-practice-remove="' + idx + '" title="Remove">&#10005;</button>';
+      html += '</div>';
+      html += '</div>';
+    });
+
+    html += '<div class="practice-total">Total: ' + totalMinutes + ' min (' + Math.floor(totalMinutes / 60) + 'h ' + (totalMinutes % 60) + 'm)</div>';
+
+    container.innerHTML = html;
+
+    // Attach event listeners
+    container.querySelectorAll('[data-practice-duration]').forEach(input => {
+      input.addEventListener('change', function() {
+        const i = parseInt(this.dataset.practiceDuration);
+        practicePlan.entries[i].duration = parseInt(this.value) || 0;
+        savePracticePlan();
+        renderPracticePlan();
+      });
+    });
+
+    container.querySelectorAll('[data-practice-notes]').forEach(input => {
+      input.addEventListener('input', function() {
+        const i = parseInt(this.dataset.practiceNotes);
+        practicePlan.entries[i].notes = this.value;
+        savePracticePlan();
+      });
+    });
+
+    container.querySelectorAll('[data-practice-up]').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const i = parseInt(this.dataset.practiceUp);
+        if (i > 0) {
+          const temp = practicePlan.entries[i];
+          practicePlan.entries[i] = practicePlan.entries[i - 1];
+          practicePlan.entries[i - 1] = temp;
+          savePracticePlan();
+          renderPracticePlan();
+        }
+      });
+    });
+
+    container.querySelectorAll('[data-practice-down]').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const i = parseInt(this.dataset.practiceDown);
+        if (i < practicePlan.entries.length - 1) {
+          const temp = practicePlan.entries[i];
+          practicePlan.entries[i] = practicePlan.entries[i + 1];
+          practicePlan.entries[i + 1] = temp;
+          savePracticePlan();
+          renderPracticePlan();
+        }
+      });
+    });
+
+    container.querySelectorAll('[data-practice-remove]').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const i = parseInt(this.dataset.practiceRemove);
+        practicePlan.entries.splice(i, 1);
+        savePracticePlan();
+        renderPracticePlan();
+      });
+    });
+  }
+
+  function exportPracticePDF() {
+    const { jsPDF } = window.jspdf;
+    const lib = loadLibrary();
+
+    const pdfW = 297; // A4 landscape width mm
+    const pdfH = 210; // A4 landscape height mm
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+    const planTitle = practicePlan.title || 'Practice Plan';
+
+    // ---- Page 1: Overview ----
+    doc.setFontSize(20);
+    doc.setFont(undefined, 'bold');
+    doc.text(planTitle, pdfW / 2, 20, { align: 'center' });
+
+    // Table header
+    const tableX = 20;
+    let tableY = 35;
+    const colWidths = { num: 10, name: 100, duration: 30, notes: pdfW - 20 - 10 - 100 - 30 - 20 };
+
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.setFillColor(230, 230, 230);
+    doc.rect(tableX, tableY - 5, pdfW - 40, 8, 'F');
+    doc.text('#', tableX + 2, tableY);
+    doc.text('Drill', tableX + colWidths.num + 2, tableY);
+    doc.text('Duration', tableX + colWidths.num + colWidths.name + 2, tableY);
+    doc.text('Notes', tableX + colWidths.num + colWidths.name + colWidths.duration + 2, tableY);
+
+    tableY += 8;
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(10);
+
+    let totalMinutes = 0;
+    practicePlan.entries.forEach((entry, idx) => {
+      if (tableY > pdfH - 30) {
+        doc.addPage();
+        tableY = 20;
+      }
+
+      const drill = lib.drills.find(d => d.id === entry.drillId);
+      const drillTitle = drill ? (drill.title || 'Untitled Drill') : '(Deleted Drill)';
+      totalMinutes += (entry.duration || 0);
+
+      // Alternating row background
+      if (idx % 2 === 0) {
+        doc.setFillColor(245, 245, 245);
+        doc.rect(tableX, tableY - 4, pdfW - 40, 7, 'F');
+      }
+
+      doc.text(String(idx + 1), tableX + 2, tableY);
+      doc.text(drillTitle.substring(0, 50), tableX + colWidths.num + 2, tableY);
+      doc.text((entry.duration || 0) + ' min', tableX + colWidths.num + colWidths.name + 2, tableY);
+
+      // Wrap notes text
+      const notesText = entry.notes || '';
+      const notesLines = doc.splitTextToSize(notesText, colWidths.notes - 4);
+      doc.text(notesLines[0] || '', tableX + colWidths.num + colWidths.name + colWidths.duration + 2, tableY);
+
+      tableY += 7;
+    });
+
+    // Total row
+    tableY += 3;
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(11);
+    doc.text('Total: ' + totalMinutes + ' min (' + Math.floor(totalMinutes / 60) + 'h ' + (totalMinutes % 60) + 'm)', tableX + colWidths.num + colWidths.name + 2, tableY);
+
+    // Watermark on page 1
+    if (CONFIG.PDF_WATERMARK) {
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(150);
+      doc.text(CONFIG.PDF_WATERMARK, pdfW / 2, pdfH - 5, { align: 'center' });
+      doc.setTextColor(0);
+    }
+
+    // ---- Subsequent pages: one per drill ----
+    practicePlan.entries.forEach((entry, idx) => {
+      const drill = lib.drills.find(d => d.id === entry.drillId);
+      if (!drill) return;
+
+      doc.addPage();
+      const drillTitle = drill.title || 'Untitled Drill';
+
+      // Drill number and title
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(0);
+      doc.text((idx + 1) + '. ' + drillTitle, pdfW / 2, 15, { align: 'center' });
+
+      // Duration
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(100);
+      doc.text('Duration: ' + (entry.duration || 0) + ' min', pdfW / 2, 23, { align: 'center' });
+      doc.setTextColor(0);
+
+      // Notes if any
+      let contentY = 30;
+      if (entry.notes) {
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'italic');
+        const noteLines = doc.splitTextToSize('Notes: ' + entry.notes, pdfW - 40);
+        doc.text(noteLines, 20, contentY);
+        contentY += noteLines.length * 5 + 5;
+        doc.setFont(undefined, 'normal');
+      }
+
+      // Description
+      if (drill.description) {
+        doc.setFontSize(10);
+        const descLines = doc.splitTextToSize(drill.description, pdfW - 40);
+        doc.text(descLines, 20, contentY);
+        contentY += descLines.length * 5 + 5;
+      }
+
+      // Tags
+      if (drill.tags && drill.tags.length > 0) {
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text('Tags: ' + drill.tags.join(', '), 20, contentY);
+        doc.setTextColor(0);
+      }
+
+      // Watermark
+      if (CONFIG.PDF_WATERMARK) {
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(150);
+        doc.text(CONFIG.PDF_WATERMARK, pdfW / 2, pdfH - 5, { align: 'center' });
+        doc.setTextColor(0);
+      }
+    });
+
+    doc.save(planTitle.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf');
+  }
+
+  function setupPractice() {
+    document.getElementById('btn-add-to-practice').addEventListener('click', function() {
+      const select = document.getElementById('practice-add-drill');
+      const drillId = select.value;
+      if (drillId) {
+        addDrillToPractice(drillId);
+        select.value = '';
+      }
+    });
+
+    document.getElementById('btn-export-practice-pdf').addEventListener('click', exportPracticePDF);
+
+    document.getElementById('practice-title').addEventListener('input', function() {
+      practicePlan.title = this.value;
+      savePracticePlan();
+    });
+  }
+
   // ==================== TAB NAVIGATION ====================
   function switchTab(tabName) {
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1414,6 +1812,10 @@ body {
     });
     if (tabName === 'library') {
       renderLibrary();
+    }
+    if (tabName === 'practice') {
+      populateDrillSelect();
+      renderPracticePlan();
     }
     if (tabName === 'editor') {
       // Trigger canvas resize in case the container changed
@@ -1435,6 +1837,12 @@ body {
 
   // ==================== TAGS ====================
   let currentTags = [];
+
+  // ==================== PRACTICE PLAN DATA ====================
+  let practicePlan = {
+    title: '',
+    entries: [] // { drillId, duration (minutes), notes }
+  };
 
   function renderTagChips() {
     const container = document.getElementById('tag-chips');
@@ -1542,6 +1950,7 @@ body {
     setupTabs();
     setupTagInput();
     setupLibraryActions();
+    setupPractice();
 
     // Load library and restore active drill
     restoreFromLibrary();
