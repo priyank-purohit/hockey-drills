@@ -17,6 +17,11 @@
 - [x] Team name persists in localStorage
 - [x] Filtered by search if active
 
+## Action Confirmations
+- [x] Save JSON — double-tap confirm (first tap shows "Confirm?", auto-cancels after 3s)
+- [x] PDF export — double-tap confirm
+- [x] Reset — double-tap confirm
+
 ## JSON Export/Import
 - [x] Individual drill export (v2 semantic format)
 - [x] Individual drill import (adds to library)

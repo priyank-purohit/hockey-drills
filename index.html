@@ -2647,6 +2647,10 @@ body {
     const rinkW = CONFIG.RINK_W * s;
     const rinkH = CONFIG.RINK_H * s;
     const lw = 0.5 * s; // standard line width for markings
+    // Muted rink colors (75% opacity) so drill objects stand out
+    const rinkRed = 'rgba(211, 47, 47, 0.55)';
+    const rinkBlue = 'rgba(25, 118, 210, 0.55)';
+    const rinkCrease = 'rgba(173, 216, 230, 0.15)';
 
     // Helper: convert logical x,y to pixel with padding and view offset
     function rx(x) { return p + x * s - vOff; }
@@ -2678,34 +2682,34 @@ body {
     // --- Center red line (x=100) ---
     elements.push(new fabric.Line(
       [rx(100), lineTop, rx(100), lineBot],
-      { stroke: '#d32f2f', strokeWidth: 1.2 * s, selectable: false, evented: false, _isRink: true }
+      { stroke: rinkRed, strokeWidth: 1.2 * s, selectable: false, evented: false, _isRink: true }
     ));
 
     // --- Blue lines (x=75, x=125) ---
     elements.push(new fabric.Line(
       [rx(75), lineTop, rx(75), lineBot],
-      { stroke: '#1976d2', strokeWidth: 1.2 * s, selectable: false, evented: false, _isRink: true }
+      { stroke: rinkBlue, strokeWidth: 1.2 * s, selectable: false, evented: false, _isRink: true }
     ));
     elements.push(new fabric.Line(
       [rx(125), lineTop, rx(125), lineBot],
-      { stroke: '#1976d2', strokeWidth: 1.2 * s, selectable: false, evented: false, _isRink: true }
+      { stroke: rinkBlue, strokeWidth: 1.2 * s, selectable: false, evented: false, _isRink: true }
     ));
 
     // --- Goal lines (x=11, x=189) — shortened for corner radius ---
     const gInset = cornerInset(11);
     elements.push(new fabric.Line(
       [rx(11), lineTop + gInset, rx(11), lineBot - gInset],
-      { stroke: '#d32f2f', strokeWidth: lw, selectable: false, evented: false, _isRink: true }
+      { stroke: rinkRed, strokeWidth: lw, selectable: false, evented: false, _isRink: true }
     ));
     elements.push(new fabric.Line(
       [rx(189), lineTop + gInset, rx(189), lineBot - gInset],
-      { stroke: '#d32f2f', strokeWidth: lw, selectable: false, evented: false, _isRink: true }
+      { stroke: rinkRed, strokeWidth: lw, selectable: false, evented: false, _isRink: true }
     ));
 
-    // --- Center circle (radius 15, matching reference) ---
+    // --- Center circle (radius 15) ---
     elements.push(new fabric.Circle({
       left: rx(100), top: ry(42.5), radius: 15 * s,
-      fill: 'transparent', stroke: '#1976d2', strokeWidth: lw,
+      fill: 'transparent', stroke: rinkBlue, strokeWidth: lw,
       originX: 'center', originY: 'center',
       selectable: false, evented: false, _isRink: true
     }));
@@ -2713,12 +2717,12 @@ body {
     // --- Center dot ---
     elements.push(new fabric.Circle({
       left: rx(100), top: ry(42.5), radius: 1.2 * s,
-      fill: '#1976d2',
+      fill: rinkBlue,
       originX: 'center', originY: 'center',
       selectable: false, evented: false, _isRink: true
     }));
 
-    // --- Face-off circles in end zones (radius 15, matching reference) ---
+    // --- Face-off circles in end zones (radius 15) ---
     const foPositions = [
       { x: 31, y: 22 }, { x: 31, y: 63 },
       { x: 169, y: 22 }, { x: 169, y: 63 }
@@ -2726,29 +2730,25 @@ body {
     const foRadius = 15;
 
     foPositions.forEach(pos => {
-      // Circle
       elements.push(new fabric.Circle({
         left: rx(pos.x), top: ry(pos.y), radius: foRadius * s,
-        fill: 'transparent', stroke: '#d32f2f', strokeWidth: lw,
+        fill: 'transparent', stroke: rinkRed, strokeWidth: lw,
         originX: 'center', originY: 'center',
         selectable: false, evented: false, _isRink: true
       }));
-
-      // Center dot
       elements.push(new fabric.Circle({
         left: rx(pos.x), top: ry(pos.y), radius: 1.2 * s,
-        fill: '#d32f2f',
+        fill: rinkRed,
         originX: 'center', originY: 'center',
         selectable: false, evented: false, _isRink: true
       }));
-
     });
 
     // --- Neutral zone face-off dots ---
     [{ x: 80, y: 22 }, { x: 80, y: 63 }, { x: 120, y: 22 }, { x: 120, y: 63 }].forEach(pos => {
       elements.push(new fabric.Circle({
         left: rx(pos.x), top: ry(pos.y), radius: 1.2 * s,
-        fill: '#d32f2f',
+        fill: rinkRed,
         originX: 'center', originY: 'center',
         selectable: false, evented: false, _isRink: true
       }));
@@ -2756,18 +2756,16 @@ body {
 
     // --- Goal creases — D-shape semicircles on goal lines ---
     const creaseR = 6 * s;
-    // Left crease at (11, 42.5), opening right
     const clx = rx(11), cly = ry(42.5);
     elements.push(new fabric.Path(
       `M ${clx} ${cly - creaseR} A ${creaseR} ${creaseR} 0 0 1 ${clx} ${cly + creaseR} Z`,
-      { fill: 'rgba(173, 216, 230, 0.25)', stroke: '#d32f2f', strokeWidth: lw,
+      { fill: rinkCrease, stroke: rinkRed, strokeWidth: lw,
         selectable: false, evented: false, _isRink: true }
     ));
-    // Right crease at (189, 42.5), opening left
     const crx2 = rx(189), cry2 = ry(42.5);
     elements.push(new fabric.Path(
       `M ${crx2} ${cry2 - creaseR} A ${creaseR} ${creaseR} 0 0 0 ${crx2} ${cry2 + creaseR} Z`,
-      { fill: 'rgba(173, 216, 230, 0.25)', stroke: '#d32f2f', strokeWidth: lw,
+      { fill: rinkCrease, stroke: rinkRed, strokeWidth: lw,
         selectable: false, evented: false, _isRink: true }
     ));
 
@@ -3799,13 +3797,44 @@ body {
       openDrill(drill.id);
     });
 
-    document.getElementById('btn-save-json').addEventListener('click', exportJSON);
+    // Save JSON — double-tap confirm
+    const saveBtn = document.getElementById('btn-save-json');
+    let savePending = false;
+    saveBtn.addEventListener('click', () => {
+      if (!savePending) {
+        savePending = true;
+        saveBtn.textContent = '⚠ Confirm?';
+        saveBtn.classList.add('danger');
+        setTimeout(() => { if (savePending) { savePending = false; saveBtn.innerHTML = '&#128190; Save'; saveBtn.classList.remove('danger'); } }, 3000);
+      } else {
+        savePending = false;
+        saveBtn.innerHTML = '&#128190; Save';
+        saveBtn.classList.remove('danger');
+        exportJSON();
+      }
+    });
+
     document.getElementById('btn-load-json').addEventListener('click', () => {
       document.getElementById('file-json').click();
     });
     document.getElementById('file-json').addEventListener('change', importJSON);
 
-    document.getElementById('btn-export-pdf').addEventListener('click', exportPDF);
+    // PDF export — double-tap confirm
+    const pdfBtn = document.getElementById('btn-export-pdf');
+    let pdfPending = false;
+    pdfBtn.addEventListener('click', () => {
+      if (!pdfPending) {
+        pdfPending = true;
+        pdfBtn.textContent = '⚠ Confirm?';
+        pdfBtn.classList.add('danger');
+        setTimeout(() => { if (pdfPending) { pdfPending = false; pdfBtn.innerHTML = '&#128196; PDF'; pdfBtn.classList.remove('danger'); } }, 3000);
+      } else {
+        pdfPending = false;
+        pdfBtn.innerHTML = '&#128196; PDF';
+        pdfBtn.classList.remove('danger');
+        exportPDF();
+      }
+    });
     document.getElementById('btn-share').addEventListener('click', shareDrill);
 
     document.getElementById('btn-upload-bg').addEventListener('click', () => {
@@ -4140,54 +4169,94 @@ body {
       var startPx = { x: (line.startX - vc.logX) * s + p, y: (line.startY - vc.logY) * s + p };
       var endPx = { x: (line.endX - vc.logX) * s + p, y: (line.endY - vc.logY) * s + p };
 
-      // Create a moving dot
-      var dot = new fabric.Circle({
+      // Animation varies by line type:
+      // skate: player (large dot) skates from start to end
+      // puck: player (large dot) + trailing puck (small dot) move together
+      // pass: player stays at start, puck (small dot) flies to end
+      // shoot: player stays at start, puck (small dot) flies faster to end
+
+      var isPlayerMoving = (line.lineType === 'skate' || line.lineType === 'puck');
+      var hasPuck = (line.lineType === 'puck' || line.lineType === 'pass' || line.lineType === 'shoot');
+      var duration = (line.lineType === 'shoot') ? 500 : 800;
+
+      // Player dot (larger, hollow circle)
+      var playerDot = new fabric.Circle({
         left: startPx.x, top: startPx.y,
-        radius: 3 * s,
-        fill: line.colour,
+        radius: 4 * s, fill: 'transparent',
+        stroke: line.colour, strokeWidth: 1.5 * s,
         originX: 'center', originY: 'center',
         selectable: false, evented: false
       });
-      canvas.add(dot);
+      canvas.add(playerDot);
 
-      // Ghost trail line that grows with the dot
+      // Puck dot (smaller, filled) — only for puck/pass/shoot
+      var puckDot = null;
+      if (hasPuck) {
+        puckDot = new fabric.Circle({
+          left: startPx.x, top: startPx.y,
+          radius: 1.5 * s, fill: '#212121',
+          originX: 'center', originY: 'center',
+          selectable: false, evented: false
+        });
+        canvas.add(puckDot);
+      }
+
+      // Ghost trail
       var ghostLine = new fabric.Line([startPx.x, startPx.y, startPx.x, startPx.y], {
-        stroke: line.colour, strokeWidth: 2 * s, opacity: 0.15,
+        stroke: line.colour, strokeWidth: 1.5 * s, opacity: 0.15,
         selectable: false, evented: false
       });
       canvas.add(ghostLine);
 
-      var duration = 800;
       var startTime = Date.now();
 
       function frame() {
-        if (!isAnimating) { canvas.remove(dot); canvas.remove(ghostLine); return; }
+        if (!isAnimating) {
+          canvas.remove(playerDot); if (puckDot) canvas.remove(puckDot); canvas.remove(ghostLine);
+          return;
+        }
 
         var elapsed = Date.now() - startTime;
         var t = Math.min(elapsed / duration, 1);
-
-        // Ease-in-out
         var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
         var curX = startPx.x + (endPx.x - startPx.x) * eased;
         var curY = startPx.y + (endPx.y - startPx.y) * eased;
 
-        dot.set({ left: curX, top: curY });
-        ghostLine.set({ x2: curX, y2: curY });
+        if (isPlayerMoving) {
+          // Player moves along the line
+          playerDot.set({ left: curX, top: curY });
+          ghostLine.set({ x2: curX, y2: curY });
+          if (puckDot) {
+            // Puck trails slightly behind the player
+            var trailT = Math.max(0, eased - 0.05);
+            puckDot.set({
+              left: startPx.x + (endPx.x - startPx.x) * trailT,
+              top: startPx.y + (endPx.y - startPx.y) * trailT
+            });
+          }
+        } else {
+          // Player stays at start, puck flies to end
+          playerDot.set({ left: startPx.x, top: startPx.y });
+          if (puckDot) {
+            puckDot.set({ left: curX, top: curY });
+          }
+          ghostLine.set({ x2: curX, y2: curY });
+        }
+
         canvas.renderAll();
 
         if (t < 1) {
           animationTimer = requestAnimationFrame(frame);
         } else {
-          // Done with this line - draw the full line and remove dot + ghost
-          canvas.remove(dot);
+          canvas.remove(playerDot);
+          if (puckDot) canvas.remove(puckDot);
           canvas.remove(ghostLine);
           createLine(line.lineType,
             { x: line.startX, y: line.startY },
             { x: line.endX, y: line.endY },
             line.colour);
           lineIndex++;
-          // Small pause before next
           animationTimer = setTimeout(animateNextLine, 200);
         }
       }

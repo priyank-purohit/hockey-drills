@@ -2,8 +2,12 @@
 
 ## Implemented
 - [x] Play button — animates lines sequentially
-- [x] Moving dot traces each line path (800ms, ease-in-out)
-- [x] Ghost trail — faded line follows dot during animation
+- [x] Type-specific animations:
+  - Skating: player (hollow circle) moves from start to end
+  - Puck carry: player moves + small puck trails behind
+  - Passing: player stays at start, puck flies to end
+  - Shooting: player stays at start, puck flies faster (500ms vs 800ms)
+- [x] Ghost trail — faded line follows movement during animation
 - [x] Objects appear instantly at start
 - [x] Stop button halts and restores full drill
 - [x] Step-through mode — advance one line at a time

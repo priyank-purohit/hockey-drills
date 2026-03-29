@@ -1,12 +1,15 @@
 # Rink & Views
 
 ## Rink Drawing
-- [x] Programmatic default rink — black border, rounded corners, 3px padding
-- [x] Center red line, two blue lines
-- [x] Center circle and center dot
-- [x] Face-off circles in end zones (4)
-- [x] Face-off dots — end zones (4) and neutral zone (4)
-- [x] Goal creases at both ends
+- [x] Programmatic default rink — thin border (1.2 units), large rounded corners (28 units), 3px canvas padding
+- [x] NHL-accurate line positions: blue lines at 75/125, goal lines at 11/189, center at 100
+- [x] Goal lines shortened with circular inset to stay within rounded corners
+- [x] Border frame rendered on top to clip any corner overflow
+- [x] Center circle and center dot (radius 15, matching face-off circles)
+- [x] Face-off circles in end zones (4, radius 15) with center dots
+- [x] Neutral zone face-off dots (4, no circles)
+- [x] D-shaped goal creases (semicircles on goal lines)
+- [x] All rink markings muted to 55% opacity so drill objects stand out
 - [x] Background image upload
 - [x] Configurable background URL
 - [x] Rink elements non-selectable and non-interactive
