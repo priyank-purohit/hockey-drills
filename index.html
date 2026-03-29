@@ -892,8 +892,20 @@ body {
       </div>
     </div>
 
-    <div id="text-input-bar" style="display:none;margin-bottom:8px;">
-      <input type="text" id="annotation-text" placeholder="Type annotation text, then click on rink to place..." style="width:100%;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:var(--font);font-size:14px;" />
+    <div id="text-input-bar" style="display:none;margin-bottom:8px;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input type="text" id="annotation-text" placeholder="Type annotation text, then click on rink to place..." style="flex:1;min-width:180px;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:var(--font);font-size:14px;" />
+      <select id="annotation-size" style="padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:var(--font);">
+        <option value="small">Small</option>
+        <option value="medium" selected>Medium</option>
+        <option value="large">Large</option>
+      </select>
+      <select id="annotation-rotation" style="padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:var(--font);">
+        <option value="0">0&deg;</option>
+        <option value="45">45&deg;</option>
+        <option value="90">90&deg;</option>
+        <option value="-45">-45&deg;</option>
+        <option value="-90">-90&deg;</option>
+      </select>
     </div>
 
     <!-- Canvas -->
@@ -2622,7 +2634,7 @@ body {
     // Show/hide text input bar
     const textBar = document.getElementById('text-input-bar');
     if (tool === 'text') {
-      textBar.style.display = 'block';
+      textBar.style.display = 'flex';
       document.getElementById('annotation-text').focus();
     } else {
       textBar.style.display = 'none';
@@ -2720,6 +2732,29 @@ body {
     if (isAnimating) return;
     const target = opt.target;
     if (target && !target._isRink && !target._isRinkBg) {
+      // If it's a text annotation, enter edit mode instead of deleting
+      if (target._objectType === 'text' || target._drillType === 'text') {
+        const existingText = target._annotationText || '';
+        const existingSize = target._annotationSize || 'medium';
+        const existingRotation = target._annotationRotation || '0';
+
+        // Select the text tool
+        selectTool('text');
+
+        // Fill in existing values
+        document.getElementById('annotation-text').value = existingText;
+        document.getElementById('annotation-size').value = existingSize;
+        document.getElementById('annotation-rotation').value = existingRotation;
+
+        // Remove the old text object
+        deleteObject(target);
+
+        // Show status message
+        const statusEl = document.getElementById('status-tool');
+        statusEl.textContent = 'Edit text, then click to re-place';
+        document.getElementById('annotation-text').focus();
+        return;
+      }
       deleteObject(target);
     }
   }
@@ -2943,7 +2978,9 @@ body {
       case 'text':
         const annotationText = document.getElementById('annotation-text').value.trim();
         if (!annotationText) return;
-        obj = placeObject('text', logPos, colour, undefined, annotationText);
+        const annotationSize = document.getElementById('annotation-size').value;
+        const annotationRotation = document.getElementById('annotation-rotation').value;
+        obj = placeObject('text', logPos, colour, undefined, { text: annotationText, size: annotationSize, rotation: annotationRotation });
         break;
     }
 
@@ -2985,9 +3022,11 @@ body {
       case 'puck5':
         obj = createMultiPuck(colour, pixPos, s);
         break;
-      case 'text':
-        obj = createTextAnnotation(extra, colour, pixPos, s);
+      case 'text': {
+        const textData = (typeof extra === 'object' && extra !== null && extra.text !== undefined) ? extra : { text: extra, size: 'medium', rotation: '0' };
+        obj = createTextAnnotation(textData.text, colour, pixPos, s, textData.size, textData.rotation);
         break;
+      }
     }
 
     if (obj) {
@@ -2996,7 +3035,12 @@ body {
       obj._colour = colour;
       obj._objectType = type;
       if (index !== undefined) obj._playerIndex = index;
-      if (type === 'text') obj._annotationText = extra;
+      if (type === 'text') {
+        const textData = (typeof extra === 'object' && extra !== null && extra.text !== undefined) ? extra : { text: extra, size: 'medium', rotation: '0' };
+        obj._annotationText = textData.text;
+        obj._annotationSize = textData.size || 'medium';
+        obj._annotationRotation = textData.rotation || '0';
+      }
     }
     return obj;
   }
@@ -3137,15 +3181,19 @@ body {
     return group;
   }
 
-  function createTextAnnotation(text, colour, pos, s) {
+  function createTextAnnotation(text, colour, pos, s, size, angle) {
+    const sizeMap = { small: 2.5, medium: 3.5, large: 5 };
+    const fontSize = (sizeMap[size] || 3.5) * s;
+    const rotation = parseFloat(angle) || 0;
     const t = new fabric.Text(text, {
       left: pos.x, top: pos.y,
-      fontSize: 3.5 * s,
+      fontSize: fontSize,
       fontWeight: '500',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       fill: colour,
       originX: 'center', originY: 'center',
       selectable: false, evented: true,
+      angle: rotation,
       _drillType: 'text'
     });
     return t;
@@ -3252,7 +3300,11 @@ body {
           colour: obj._colour
         };
         if (obj._playerIndex !== undefined) entry.index = obj._playerIndex;
-        if (obj._objectType === 'text') entry.text = obj._annotationText;
+        if (obj._objectType === 'text') {
+          entry.text = obj._annotationText;
+          entry.size = obj._annotationSize || 'medium';
+          entry.rotation = obj._annotationRotation || '0';
+        }
         items.push(entry);
       }
     });
@@ -3272,11 +3324,12 @@ body {
           { x: item.endX, y: item.endY },
           item.colour);
       } else if (item.kind === 'object') {
+        const extra = (item.objectType === 'text') ? { text: item.text, size: item.size || 'medium', rotation: item.rotation || '0' } : item.text;
         const obj = placeObject(item.objectType,
           { x: item.x, y: item.y },
           item.colour,
           item.index,
-          item.text);
+          extra);
         if (obj) canvas.add(obj);
       }
     });
@@ -3738,7 +3791,8 @@ body {
     canvas.clear();
     drawDefaultRink();
     objects.forEach(function(item) {
-      var obj = placeObject(item.objectType, {x: item.x, y: item.y}, item.colour, item.index, item.text);
+      var animExtra = (item.objectType === 'text') ? { text: item.text, size: item.size || 'medium', rotation: item.rotation || '0' } : item.text;
+      var obj = placeObject(item.objectType, {x: item.x, y: item.y}, item.colour, item.index, animExtra);
       if (obj) canvas.add(obj);
     });
     canvas.renderAll();
