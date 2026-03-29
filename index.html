@@ -898,6 +898,7 @@ body {
     <div class="library-footer">
       <button class="action-btn" id="btn-export-library">&#128190; Export Library</button>
       <button class="action-btn" id="btn-import-library">&#128194; Import Library</button>
+      <button class="action-btn" id="btn-print-cards" title="Print drill cards (2 per page)">&#128424; Print Cards</button>
       <input type="file" id="file-library-import" accept=".json,application/json" style="display:none" />
     </div>
   </div>
@@ -1278,6 +1279,124 @@ body {
     a.download = 'hockey-drill-library.json';
     a.click();
     URL.revokeObjectURL(a.href);
+  }
+
+  async function exportPracticeCards() {
+    const lib = loadLibrary();
+    let drills = lib.drills;
+
+    // If search is active, filter
+    const search = document.getElementById('library-search').value.toLowerCase().trim();
+    if (search) {
+      drills = drills.filter(d =>
+        (d.title || '').toLowerCase().includes(search) ||
+        (d.description || '').toLowerCase().includes(search)
+      );
+    }
+
+    if (drills.length === 0) return;
+
+    const btn = document.getElementById('btn-print-cards');
+    const origText = btn.innerHTML;
+    btn.innerHTML = '&#9203; Generating...';
+    btn.disabled = true;
+
+    // Save current state
+    const currentItems = serializeDrill();
+    const currentView = rinkView;
+
+    // Force full view for thumbnails
+    rinkView = 'full';
+
+    // Capture each drill as a data URL
+    const drillImages = [];
+    for (const drill of drills) {
+      suppressHistory = true;
+      renderDrill(drill.items || []);
+      suppressHistory = false;
+
+      // Wait a tick for rendering
+      await new Promise(r => setTimeout(r, 50));
+
+      const dataUrl = canvas.toDataURL({ format: 'png', multiplier: 1.5 });
+      drillImages.push({
+        title: drill.title || 'Untitled Drill',
+        description: drill.description || '',
+        tags: drill.tags || [],
+        image: dataUrl
+      });
+    }
+
+    // Restore current drill
+    rinkView = currentView;
+    suppressHistory = true;
+    renderDrill(currentItems);
+    suppressHistory = false;
+    if (activeTool === 'move') enableMoveMode();
+
+    // Generate PDF — landscape A4, 2 cards per page
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = 297;
+    const pageH = 210;
+    const margin = 10;
+    const cardH = (pageH - margin * 3) / 2; // 2 cards stacked vertically
+    const cardW = pageW - margin * 2;
+
+    for (let i = 0; i < drillImages.length; i++) {
+      const drill = drillImages[i];
+      const isTop = (i % 2 === 0);
+
+      if (i > 0 && isTop) {
+        doc.addPage();
+      }
+
+      const cardY = isTop ? margin : margin + cardH + margin;
+
+      // Card border
+      doc.setDrawColor(200);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, cardY, cardW, cardH, 3, 3);
+
+      // Rink image — left side of card
+      const imgW = cardH * (200 / 85) * 0.55;
+      const imgH = cardH * 0.55;
+      const imgX = margin + 5;
+      const imgY = cardY + 5;
+      doc.addImage(drill.image, 'PNG', imgX, imgY, imgW, imgH);
+
+      // Text — right side
+      const textX = imgX + imgW + 8;
+      const textW = cardW - imgW - 23;
+
+      // Title
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(33);
+      doc.text(drill.title, textX, cardY + 12);
+
+      // Tags
+      if (drill.tags.length > 0) {
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(100);
+        doc.text(drill.tags.join(' \u2022 '), textX, cardY + 18);
+      }
+
+      // Description
+      if (drill.description) {
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(66);
+        const lines = doc.splitTextToSize(drill.description, textW);
+        doc.text(lines.slice(0, 6), textX, cardY + 25); // max 6 lines
+      }
+    }
+
+    doc.save('drill-cards.pdf');
+
+    btn.innerHTML = origText;
+    btn.disabled = false;
   }
 
   function importLibraryJSON(file) {
@@ -3086,6 +3205,8 @@ body {
     });
 
     document.getElementById('btn-export-library').addEventListener('click', exportLibraryJSON);
+
+    document.getElementById('btn-print-cards').addEventListener('click', exportPracticeCards);
 
     document.getElementById('btn-import-library').addEventListener('click', () => {
       document.getElementById('file-library-import').click();
