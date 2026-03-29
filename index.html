@@ -5198,5 +5198,6 @@ html[data-theme="dark"] {
     <button class="action-btn" style="margin-top:12px;width:100%;" onclick="document.getElementById('shortcuts-modal').style.display='none'">Close</button>
   </div>
 </div>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }</script>
 </body>
 </html>
