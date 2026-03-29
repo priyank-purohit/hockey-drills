@@ -5111,7 +5111,7 @@ html[data-theme="dark"] {
   function updateLastUpdated() {
     const el = document.getElementById('last-updated');
     if (!el) return;
-    el.textContent = 'Mar 29, 2026, 01:55 PM'; // AUTO_TIMESTAMP
+    el.textContent = 'Mar 29, 2026, 03:25 PM'; // AUTO_TIMESTAMP
   }
 
   // ==================== PERSISTENCE (LIBRARY-AWARE) ====================
@@ -5367,17 +5367,16 @@ html[data-theme="dark"] {
 
         var curPos = interpPath(eased);
 
-        // Update ghost trail path
+        // Update ghost trail path (traces actual waypoint route)
         var newGhostPath = buildGhostPath(eased);
         if (newGhostPath !== ghostPathStr) {
           ghostPathStr = newGhostPath;
           if (ghostLine) canvas.remove(ghostLine);
           ghostLine = new fabric.Path(ghostPathStr, {
-            fill: 'transparent', stroke: line.colour, strokeWidth: 1.5 * s, opacity: 0.15,
+            fill: 'transparent', stroke: line.colour, strokeWidth: 2 * s, opacity: 0.25,
             selectable: false, evented: false
           });
           canvas.add(ghostLine);
-          canvas.sendToBack(ghostLine);
         }
 
         if (isPlayerMoving) {
