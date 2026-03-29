@@ -2088,7 +2088,21 @@ html[data-theme="dark"] {
       btn.addEventListener('click', () => deleteDrill(btn.dataset.drillDel));
     });
     container.querySelectorAll('[data-drill-export]').forEach(btn => {
-      btn.addEventListener('click', () => exportDrillJSON(btn.dataset.drillExport));
+      let pending = false;
+      const origText = btn.textContent;
+      btn.addEventListener('click', () => {
+        if (!pending) {
+          pending = true;
+          btn.textContent = '\u26A0 Confirm?';
+          btn.classList.add('danger');
+          setTimeout(() => { if (pending) { pending = false; btn.textContent = origText; btn.classList.remove('danger'); } }, 3000);
+        } else {
+          pending = false;
+          btn.textContent = origText;
+          btn.classList.remove('danger');
+          exportDrillJSON(btn.dataset.drillExport);
+        }
+      });
     });
 
     // Generate thumbnails lazily after DOM is updated
