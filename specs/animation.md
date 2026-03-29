@@ -3,10 +3,12 @@
 ## Implemented
 - [x] Play button — animates lines sequentially
 - [x] Type-specific animations:
-  - Skating: player (hollow circle) moves from start to end
-  - Puck carry: player moves + small puck trails behind
+  - Skating: red player circle moves from start to end
+  - Puck carry: red player circle + puck in FRONT move together
   - Passing: player stays at start, puck flies to end
-  - Shooting: player stays at start, puck flies faster (500ms vs 800ms)
+  - Shooting: player stays at start, red puck flies faster (500ms vs 800ms)
+  - Freehand: dot traces the actual freehand path
+- [x] Multi-segment line tracing — dot follows waypoint path via interpolation
 - [x] Ghost trail — faded line follows movement during animation
 - [x] Speed control — 1/3 Speed, 2/3 Speed, Full Speed selector
 - [x] Objects appear instantly at start

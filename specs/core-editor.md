@@ -39,7 +39,14 @@
 - [x] ? key toggles keyboard shortcuts panel
 - [x] beforeunload warning when drill has items on canvas
 - [x] PNG export with double-tap confirm
+- [x] JSON export (separate from Save) with double-tap confirm
+- [x] Save = browser localStorage save (no file download)
 - [x] Fullscreen mode — rink expands to 95% width
+- [x] 2-step colour picker (click button → dropdown grid)
+- [x] Player circles have opaque white background for legibility
+- [x] Net mesh grid pattern (2x2 grid instead of cross-hatch)
+- [x] 3 pucks in triangle layout (was 5)
+- [x] Toolbar: Row 1 (tools+colour+width+move), Row 2 (view+play | actions), Bottom (save+export+io)
 
 ## Future
 - [ ] Curved/bezier lines

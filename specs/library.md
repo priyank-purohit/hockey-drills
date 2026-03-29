@@ -28,6 +28,9 @@
 - [x] Auto-save to library on every action
 - [x] New Drill button
 - [x] Migration from v2 single-drill format
+- [x] Default sample drill ("Game warm up") for new users
+- [x] Favourite/star drills via "Favourite" tag toggle
+- [x] Share drill from library card without loading (QR + URL)
 
 ## Export/Import
 - [x] Full library export as one JSON file (with confirm)

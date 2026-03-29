@@ -1293,6 +1293,30 @@ html[data-theme="dark"] {
     WAVE_FREQ: 0.8
   };
 
+  // Default sample drill items (embedded from config/default-drill.json)
+  const DEFAULT_DRILL_ITEMS = [
+    {kind:"object",objectType:"forward",x:19.1,y:11.95,colour:"#d32f2f",index:1},
+    {kind:"object",objectType:"forward",x:14,y:15.67,colour:"#d32f2f",index:2},
+    {kind:"object",objectType:"forward",x:19.49,y:71.89,colour:"#d32f2f",index:3},
+    {kind:"object",objectType:"forward",x:16.75,y:76.2,colour:"#d32f2f",index:4},
+    {kind:"object",objectType:"defense",x:14.79,y:26.05,colour:"#d32f2f",index:1},
+    {kind:"object",objectType:"defense",x:7.54,y:27.03,colour:"#d32f2f",index:2},
+    {kind:"object",objectType:"defense",x:17.14,y:64.05,colour:"#d32f2f",index:3},
+    {kind:"object",objectType:"defense",x:7.54,y:63.08,colour:"#d32f2f",index:4},
+    {kind:"object",objectType:"puck5",x:7.15,y:18.41,colour:"#212121"},
+    {kind:"object",objectType:"puck5",x:9.5,y:16.85,colour:"#212121"},
+    {kind:"object",objectType:"puck5",x:7.93,y:70.13,colour:"#212121"},
+    {kind:"object",objectType:"puck5",x:12.24,y:70.32,colour:"#212121"},
+    {kind:"object",objectType:"goalie",x:14.99,y:42.31,colour:"#d32f2f",index:1},
+    {kind:"object",objectType:"goalie",x:4.41,y:42.31,colour:"#d32f2f",index:2},
+    {kind:"line",lineType:"skate",colour:"#212121",thickness:"medium",points:[{x:24.58,y:10.97},{x:85.5,y:10.58},{x:92.16,y:21.16},{x:84.92,y:30.17},{x:61.21,y:32.91}]},
+    {kind:"line",lineType:"pass",colour:"#212121",thickness:"medium",points:[{x:19.29,y:26.05},{x:54.55,y:33.5}]},
+    {kind:"line",lineType:"shoot",colour:"#212121",thickness:"medium",points:[{x:45.74,y:36.63},{x:25.37,y:40.55}]},
+    {kind:"line",lineType:"skate",colour:"#212121",thickness:"medium",points:[{x:23.21,y:76.4},{x:80.61,y:76.98},{x:92.56,y:66.6},{x:84.13,y:53.09},{x:63.37,y:50.15},{x:61.21,y:49.95}]},
+    {kind:"line",lineType:"pass",colour:"#212121",thickness:"medium",points:[{x:21.65,y:61.51},{x:53.18,y:54.85},{x:57.88,y:52.5}]},
+    {kind:"line",lineType:"shoot",colour:"#212121",thickness:"medium",points:[{x:54.36,y:48.78},{x:27.72,y:45.64}]}
+  ];
+
   // View configurations: logical viewport rectangles within the 200x85 rink space
   const VIEW_CONFIGS = {
     full:    { logX: 0,         logY: 0, logW: 200,       logH: 85 },
@@ -1375,22 +1399,24 @@ html[data-theme="dark"] {
       }
     } catch (e) { /* ignore */ }
 
-    // Nothing found — create empty library with one blank drill
+    // Nothing found — create library with default sample drill
     const drillId = generateId();
     const now = new Date().toISOString();
     const lib = {
       version: 3,
-      categories: [],
-      drills: [{
-        id: drillId,
-        title: '',
-        description: '',
-        tags: [],
-        backgroundUrl: null,
-        items: [],
-        createdAt: now,
-        modifiedAt: now
-      }],
+      categories: ['Sample'],
+      drills: [
+        {
+          id: drillId,
+          title: 'Game warm up',
+          description: 'One side goes, then the next player goes immediately when the other side player gets the pass. Goalies can change every couple shots.',
+          tags: ['Sample'],
+          backgroundUrl: null,
+          items: DEFAULT_DRILL_ITEMS,
+          createdAt: now,
+          modifiedAt: now
+        }
+      ],
       activeDrillId: drillId
     };
     saveLibrary(lib);
@@ -5085,7 +5111,7 @@ html[data-theme="dark"] {
   function updateLastUpdated() {
     const el = document.getElementById('last-updated');
     if (!el) return;
-    el.textContent = 'Mar 29, 2026, 09:31 AM'; // AUTO_TIMESTAMP
+    el.textContent = 'Mar 29, 2026, 09:48 AM'; // AUTO_TIMESTAMP
   }
 
   // ==================== PERSISTENCE (LIBRARY-AWARE) ====================
