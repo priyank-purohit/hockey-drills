@@ -701,6 +701,8 @@ body {
     <div class="toolbar">
       <!-- Lines -->
       <div class="toolbar-section">
+        <button class="tool-btn" data-tool="move" title="Select &amp; move objects">&#9995; Move</button>
+        <div class="toolbar-divider"></div>
         <span class="toolbar-label">Lines</span>
         <button class="tool-btn" data-tool="skate" title="Skating line (solid + arrow)">&#8594; Skate</button>
         <button class="tool-btn" data-tool="puck" title="Skating with puck (squiggly + arrow)">&#12336; Puck</button>
@@ -1623,6 +1625,11 @@ body {
     suppressHistory = true;
     renderDrill(items);
     suppressHistory = false;
+
+    // Re-enable move mode if active
+    if (activeTool === 'move') {
+      enableMoveMode();
+    }
   }
 
   // ==================== RINK DRAWING ====================
@@ -1724,6 +1731,11 @@ body {
   }
 
   function selectTool(tool) {
+    // Disable move mode if we're switching away from it
+    if (activeTool === 'move' && tool !== 'move') {
+      disableMoveMode();
+    }
+
     cancelLineDrawing();
     activeTool = tool;
 
@@ -1739,10 +1751,18 @@ body {
     const defaultCol = CONFIG.DEFAULT_COLOURS[tool];
     updateColourSwatchHighlight(defaultCol);
 
+    // Enable move mode if move tool selected
+    if (tool === 'move') {
+      enableMoveMode();
+    }
+
     updateStatus();
   }
 
   function deselectTool() {
+    if (activeTool === 'move') {
+      disableMoveMode();
+    }
     cancelLineDrawing();
     activeTool = null;
     activeColour = null;
@@ -1786,6 +1806,9 @@ body {
     canvas.on('mouse:down', onLongPressStart);
     canvas.on('mouse:up', onLongPressEnd);
     canvas.on('mouse:move', onLongPressCancel);
+
+    // Move mode: update logical coords after drag
+    canvas.on('object:modified', onObjectModified);
   }
 
   function onCanvasMouseDown(opt) {
@@ -2213,6 +2236,74 @@ body {
     return group;
   }
 
+  // ==================== MOVE MODE ====================
+  function enableMoveMode() {
+    canvas.getObjects().forEach(obj => {
+      if (obj._isRink || obj._isRinkBg || obj._isPreview) return;
+      obj.set({
+        selectable: true,
+        evented: true,
+        hasControls: false,
+        hasBorders: true,
+        lockRotation: true,
+        lockScalingX: true,
+        lockScalingY: true,
+        borderColor: '#1976d2',
+        borderDashArray: [4, 4]
+      });
+    });
+    canvas.selection = false;
+    canvas.renderAll();
+  }
+
+  function disableMoveMode() {
+    canvas.getObjects().forEach(obj => {
+      if (obj._isRink || obj._isRinkBg || obj._isPreview) return;
+      obj.set({
+        selectable: false,
+        hasBorders: false
+      });
+    });
+    canvas.discardActiveObject();
+    canvas.renderAll();
+  }
+
+  function onObjectModified(e) {
+    const obj = e.target;
+    if (!obj || obj._isRink || obj._isRinkBg) return;
+
+    const s = scaleFactor;
+    const p = CONFIG.RINK_PADDING;
+
+    if (obj._drillType === 'line') {
+      // For line groups: compute delta from old position to new position
+      // The group's logical center was at the midpoint of start/end
+      // After move, left/top reflect the new center (with originX/Y offsets)
+      const newCenterX = obj.left;
+      const newCenterY = obj.top;
+
+      // Old pixel center based on logical coords
+      const oldCenterX = ((obj._logStartX + obj._logEndX) / 2) * s + p;
+      const oldCenterY = ((obj._logStartY + obj._logEndY) / 2) * s + p;
+
+      const deltaLogX = (newCenterX - oldCenterX) / s;
+      const deltaLogY = (newCenterY - oldCenterY) / s;
+
+      obj._logStartX += deltaLogX;
+      obj._logStartY += deltaLogY;
+      obj._logEndX += deltaLogX;
+      obj._logEndY += deltaLogY;
+    } else if (obj._objectType) {
+      // For regular objects (players, pylons, nets, pucks)
+      // These use originX/Y: 'center' so left/top is the center
+      obj._logX = (obj.left - p) / s;
+      obj._logY = (obj.top - p) / s;
+    }
+
+    saveHistoryState();
+    autoSave();
+  }
+
   // ==================== SEMANTIC SERIALIZATION ====================
   // Extracts drill data as a simple array of {type, ...params} objects.
   // Positions stored in logical coordinates (0-200 x 0-85).
@@ -2310,6 +2401,11 @@ body {
     suppressHistory = false;
     updateUndoRedoButtons();
     autoSave();
+
+    // Re-enable move mode if active
+    if (activeTool === 'move') {
+      enableMoveMode();
+    }
   }
 
   function updateUndoRedoButtons() {
@@ -2611,6 +2707,7 @@ body {
       el.textContent = 'No tool selected';
     } else {
       const names = {
+        move: 'Move',
         skate: 'Skating Line', puck: 'Puck Line', pass: 'Passing Line', shoot: 'Shooting Line',
         forward: 'Forward', defense: 'Defenseman', goalie: 'Goalie',
         net: 'Hockey Net', pylon: 'Pylon', puck1: 'Puck', puck5: 'Multi-Puck'
