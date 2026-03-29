@@ -6,6 +6,8 @@
 <title>Hockey Drill Maker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <style>
 /* ========== CSS Variables & Theming ========== */
 :root {
@@ -942,6 +944,7 @@ body {
         <h2 style="font-size:18px;font-weight:600;">Practice Plan</h2>
         <div style="display:flex;gap:8px;">
           <button class="action-btn" id="btn-export-practice-pdf">&#128196; Export PDF</button>
+          <button class="action-btn" id="btn-share-plan" title="Share practice plan via link">&#128279; Share Plan</button>
         </div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
@@ -1009,6 +1012,14 @@ body {
   </div>
   <div style="text-align:center;padding:12px;font-size:10px;color:var(--text-secondary);margin-top:16px;">
     Built by Priyank Purohit &nbsp;|&nbsp; Last updated: <span id="last-updated"></span>
+  </div>
+  <div id="qr-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;" onclick="this.style.display='none'">
+    <div style="background:var(--surface);border-radius:var(--radius);padding:24px;text-align:center;max-width:320px;" onclick="event.stopPropagation()">
+      <h3 style="margin-bottom:12px;font-size:16px;">Scan to open drill</h3>
+      <div id="qr-code"></div>
+      <p style="margin-top:12px;font-size:11px;color:var(--text-secondary);">URL also copied to clipboard</p>
+      <button class="action-btn" style="margin-top:12px;" onclick="document.getElementById('qr-modal').style.display='none'">Close</button>
+    </div>
   </div>
 </div>
 
@@ -2119,6 +2130,7 @@ body {
     });
 
     document.getElementById('btn-export-practice-pdf').addEventListener('click', exportPracticePDF);
+    document.getElementById('btn-share-plan').addEventListener('click', sharePracticePlan);
 
     document.getElementById('practice-title').addEventListener('input', function() {
       getActivePlan().title = this.value;
@@ -3389,6 +3401,33 @@ body {
   }
 
   // ==================== SHARE VIA LINK ====================
+  function showQRModal(url) {
+    const qrDiv = document.getElementById('qr-code');
+    qrDiv.innerHTML = '';
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    qrDiv.innerHTML = qr.createSvgTag(6, 0);
+    document.getElementById('qr-modal').style.display = 'flex';
+  }
+
+  function copyAndShowQR(url, btn) {
+    if (url.length > 8000) {
+      alert('Warning: This share URL is ' + url.length + ' characters long. Some browsers may not support URLs this long.');
+    }
+
+    navigator.clipboard.writeText(url).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '\u2713 Copied!';
+      btn.style.color = '#388e3c';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+    }).catch(() => {
+      prompt('Share this URL:', url);
+    });
+
+    showQRModal(url);
+  }
+
   function shareDrill() {
     const drill = {
       v: 2,
@@ -3397,34 +3436,105 @@ body {
       i: serializeDrill()
     };
     const json = JSON.stringify(drill);
-    // Encode: JSON → URI encode → btoa → URL-safe base64
-    const encoded = btoa(unescape(encodeURIComponent(json)))
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    const url = window.location.origin + window.location.pathname + '#drill=' + encoded;
+    const compressed = LZString.compressToEncodedURIComponent(json);
+    const url = window.location.origin + window.location.pathname + '#drill=' + compressed;
 
-    if (url.length > 8000) {
-      alert('Warning: This drill is very complex and the share URL is ' + url.length + ' characters long. Some browsers may not support URLs this long.');
+    copyAndShowQR(url, document.getElementById('btn-share'));
+  }
+
+  function sharePracticePlan() {
+    const plan = getActivePlan();
+    const lib = loadLibrary();
+
+    // Build a shareable object that includes the plan + referenced drills
+    const drillIds = plan.entries.filter(function(e) { return (e.type || 'drill') === 'drill'; }).map(function(e) { return e.drillId; });
+    const drills = lib.drills.filter(function(d) { return drillIds.includes(d.id); });
+
+    const data = {
+      type: 'plan',
+      plan: plan,
+      drills: drills.map(function(d) { return { id: d.id, title: d.title, description: d.description, tags: d.tags, items: d.items }; })
+    };
+
+    const json = JSON.stringify(data);
+    const compressed = LZString.compressToEncodedURIComponent(json);
+    const url = window.location.origin + window.location.pathname + '#plan=' + compressed;
+
+    copyAndShowQR(url, document.getElementById('btn-share-plan'));
+  }
+
+  function decodeShareData(encoded) {
+    // Try LZ-String decompression first
+    var json = LZString.decompressFromEncodedURIComponent(encoded);
+    if (json) return json;
+    // Fall back to legacy base64 decode
+    try {
+      var base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+      return decodeURIComponent(escape(atob(base64)));
+    } catch (e) {
+      return null;
     }
-
-    navigator.clipboard.writeText(url).then(() => {
-      const btn = document.getElementById('btn-share');
-      const orig = btn.innerHTML;
-      btn.innerHTML = '\u2713 Copied!';
-      btn.style.color = '#388e3c';
-      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
-    }).catch(() => {
-      prompt('Share this URL:', url);
-    });
   }
 
   function loadFromShareURL() {
     const hash = window.location.hash;
+
+    if (hash.startsWith('#plan=')) {
+      try {
+        const encoded = hash.substring(6);
+        const json = decodeShareData(encoded);
+        if (!json) return false;
+        const data = JSON.parse(json);
+        if (data.type !== 'plan') return false;
+
+        const lib = loadLibrary();
+        const now = new Date().toISOString();
+
+        // Import referenced drills (skip duplicates by ID)
+        if (data.drills && Array.isArray(data.drills)) {
+          data.drills.forEach(function(d) {
+            if (!lib.drills.find(function(existing) { return existing.id === d.id; })) {
+              lib.drills.push({
+                id: d.id,
+                title: d.title || 'Shared Drill',
+                description: d.description || '',
+                tags: d.tags || ['Shared'],
+                backgroundUrl: null,
+                items: d.items || [],
+                createdAt: now,
+                modifiedAt: now
+              });
+            }
+          });
+        }
+
+        if (!lib.categories.includes('Shared')) lib.categories.push('Shared');
+
+        // Import the practice plan
+        const plan = data.plan;
+        plan.id = generateId(); // Give it a new ID to avoid conflicts
+        practicePlans.push(plan);
+        activePlanIndex = practicePlans.length - 1;
+
+        saveLibrary(lib);
+
+        // Clean the URL hash and switch to Practice Plan tab
+        history.replaceState(null, '', window.location.pathname);
+        setTimeout(function() { switchTab('practice'); }, 100);
+
+        return true;
+      } catch (e) {
+        console.warn('Failed to load shared practice plan:', e);
+        return false;
+      }
+    }
+
     if (!hash.startsWith('#drill=')) return false;
 
     try {
       const encoded = hash.substring(7);
-      const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
-      const json = decodeURIComponent(escape(atob(base64)));
+      const json = decodeShareData(encoded);
+      if (!json) return false;
       const drill = JSON.parse(json);
 
       document.getElementById('drill-title').value = drill.t || '';
