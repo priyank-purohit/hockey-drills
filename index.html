@@ -4669,12 +4669,7 @@ html[data-theme="dark"] {
   function updateLastUpdated() {
     const el = document.getElementById('last-updated');
     if (!el) return;
-    const lib = loadLibrary();
-    const drill = getActiveDrill(lib);
-    if (drill && drill.modifiedAt) {
-      const d = new Date(drill.modifiedAt);
-      el.textContent = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    }
+    el.textContent = 'Mar 29, 2026';
   }
 
   // ==================== PERSISTENCE (LIBRARY-AWARE) ====================
