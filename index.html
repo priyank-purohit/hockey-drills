@@ -932,6 +932,11 @@ body {
           <button class="action-btn" id="btn-export-practice-pdf">&#128196; Export PDF</button>
         </div>
       </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+        <select id="practice-plan-select" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:var(--font);font-size:13px;"></select>
+        <button class="action-btn" id="btn-new-plan">+ New Plan</button>
+        <button class="action-btn danger" id="btn-delete-plan" style="color:var(--danger);border-color:var(--danger);">Delete Plan</button>
+      </div>
       <input type="text" id="practice-title" placeholder="Practice Plan Title (e.g. Tuesday Practice)" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:var(--font);font-size:16px;font-weight:600;margin-bottom:12px;" />
       <div id="practice-drills-list" style="margin-bottom:12px;"></div>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -939,6 +944,7 @@ body {
           <option value="">Select a drill to add...</option>
         </select>
         <button class="action-btn" id="btn-add-to-practice">+ Add Drill</button>
+        <button class="action-btn" id="btn-add-break-to-practice">+ Add Break</button>
       </div>
     </div>
   </div>
@@ -1084,9 +1090,29 @@ body {
       if (raw) {
         const lib = JSON.parse(raw);
         if (lib && lib.version === 3) {
-          // Restore practice plan if saved
-          if (lib.practicePlan) {
-            practicePlan = lib.practicePlan;
+          // Restore practice plans if saved
+          if (lib.practicePlans && Array.isArray(lib.practicePlans)) {
+            practicePlans = lib.practicePlans;
+            activePlanIndex = (typeof lib.activePlanIndex === 'number' && lib.activePlanIndex >= 0 && lib.activePlanIndex < practicePlans.length) ? lib.activePlanIndex : 0;
+            // Ensure all entries have a type for backward compatibility
+            practicePlans.forEach(plan => {
+              (plan.entries || []).forEach(entry => {
+                if (!entry.type) entry.type = 'drill';
+              });
+              if (!plan.id) plan.id = generateId();
+            });
+          } else if (lib.practicePlan) {
+            // Migration: single practicePlan -> array
+            const oldPlan = lib.practicePlan;
+            if (!oldPlan.id) oldPlan.id = generateId();
+            (oldPlan.entries || []).forEach(entry => {
+              if (!entry.type) entry.type = 'drill';
+            });
+            practicePlans = [oldPlan];
+            activePlanIndex = 0;
+            delete lib.practicePlan;
+            lib.practicePlans = practicePlans;
+            lib.activePlanIndex = activePlanIndex;
           }
           return lib;
         }
@@ -1145,7 +1171,8 @@ body {
 
   function saveLibrary(lib) {
     try {
-      lib.practicePlan = practicePlan;
+      lib.practicePlans = practicePlans;
+      lib.activePlanIndex = activePlanIndex;
       localStorage.setItem(LIBRARY_KEY, JSON.stringify(lib));
     } catch (e) { /* storage full — silently fail */ }
   }
@@ -1764,25 +1791,46 @@ body {
 
   function addDrillToPractice(drillId) {
     if (!drillId) return;
-    practicePlan.entries.push({ drillId: drillId, duration: 10, notes: '' });
+    getActivePlan().entries.push({ type: 'drill', drillId: drillId, duration: 10, notes: '' });
+    savePracticePlan();
+    renderPracticePlan();
+  }
+
+  function addBreakToPractice() {
+    getActivePlan().entries.push({ type: 'break', label: 'Water Break', duration: 5, notes: '' });
     savePracticePlan();
     renderPracticePlan();
   }
 
   function savePracticePlan() {
-    practicePlan.title = document.getElementById('practice-title').value;
+    getActivePlan().title = document.getElementById('practice-title').value;
     const lib = loadLibrary();
     saveLibrary(lib);
   }
 
+  function renderPlanSelector() {
+    const select = document.getElementById('practice-plan-select');
+    select.innerHTML = '';
+    practicePlans.forEach((plan, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      opt.textContent = plan.title || ('Plan ' + (idx + 1));
+      opt.selected = (idx === activePlanIndex);
+      select.appendChild(opt);
+    });
+  }
+
   function renderPracticePlan() {
+    const plan = getActivePlan();
     const container = document.getElementById('practice-drills-list');
     const lib = loadLibrary();
 
-    // Restore title into input
-    document.getElementById('practice-title').value = practicePlan.title || '';
+    renderPlanSelector();
 
-    if (practicePlan.entries.length === 0) {
+    // Restore title into input
+    document.getElementById('practice-title').value = plan.title || '';
+
+    if (plan.entries.length === 0) {
       container.innerHTML = '<div class="practice-empty">No drills added yet. Select a drill below and click "+ Add Drill".</div>';
       return;
     }
@@ -1790,21 +1838,28 @@ body {
     let html = '';
     let totalMinutes = 0;
 
-    practicePlan.entries.forEach((entry, idx) => {
-      const drill = lib.drills.find(d => d.id === entry.drillId);
-      const title = drill ? (drill.title || 'Untitled Drill') : '(Deleted Drill)';
+    plan.entries.forEach((entry, idx) => {
+      const entryType = entry.type || 'drill';
       totalMinutes += (entry.duration || 0);
 
       html += '<div class="practice-entry" data-index="' + idx + '">';
       html += '<span style="font-size:12px;color:var(--text-secondary);font-weight:600;min-width:24px;">' + (idx + 1) + '.</span>';
-      html += '<span class="practice-entry-title">' + escHtml(title) + '</span>';
+
+      if (entryType === 'break') {
+        html += '<input type="text" value="' + escHtml(entry.label || 'Water Break') + '" data-practice-label="' + idx + '" style="font-weight:600;min-width:120px;flex:1;font-style:italic;" />';
+      } else {
+        const drill = lib.drills.find(d => d.id === entry.drillId);
+        const title = drill ? (drill.title || 'Untitled Drill') : '(Deleted Drill)';
+        html += '<span class="practice-entry-title">' + escHtml(title) + '</span>';
+      }
+
       html += '<input type="number" min="0" max="999" value="' + (entry.duration || 0) + '" data-practice-duration="' + idx + '" title="Duration (minutes)" /> <span style="font-size:11px;color:var(--text-secondary);">min</span>';
       html += '<input type="text" value="' + escHtml(entry.notes || '') + '" placeholder="Notes..." data-practice-notes="' + idx + '" />';
       html += '<div class="practice-entry-actions">';
       if (idx > 0) {
         html += '<button data-practice-up="' + idx + '" title="Move up">&#9650;</button>';
       }
-      if (idx < practicePlan.entries.length - 1) {
+      if (idx < plan.entries.length - 1) {
         html += '<button data-practice-down="' + idx + '" title="Move down">&#9660;</button>';
       }
       html += '<button class="danger-action" data-practice-remove="' + idx + '" title="Remove">&#10005;</button>';
@@ -1823,7 +1878,7 @@ body {
     container.querySelectorAll('[data-practice-duration]').forEach(input => {
       input.addEventListener('change', function() {
         const i = parseInt(this.dataset.practiceDuration);
-        practicePlan.entries[i].duration = parseInt(this.value) || 0;
+        plan.entries[i].duration = parseInt(this.value) || 0;
         savePracticePlan();
         renderPracticePlan();
       });
@@ -1832,7 +1887,15 @@ body {
     container.querySelectorAll('[data-practice-notes]').forEach(input => {
       input.addEventListener('input', function() {
         const i = parseInt(this.dataset.practiceNotes);
-        practicePlan.entries[i].notes = this.value;
+        plan.entries[i].notes = this.value;
+        savePracticePlan();
+      });
+    });
+
+    container.querySelectorAll('[data-practice-label]').forEach(input => {
+      input.addEventListener('input', function() {
+        const i = parseInt(this.dataset.practiceLabel);
+        plan.entries[i].label = this.value;
         savePracticePlan();
       });
     });
@@ -1841,9 +1904,9 @@ body {
       btn.addEventListener('click', function() {
         const i = parseInt(this.dataset.practiceUp);
         if (i > 0) {
-          const temp = practicePlan.entries[i];
-          practicePlan.entries[i] = practicePlan.entries[i - 1];
-          practicePlan.entries[i - 1] = temp;
+          const temp = plan.entries[i];
+          plan.entries[i] = plan.entries[i - 1];
+          plan.entries[i - 1] = temp;
           savePracticePlan();
           renderPracticePlan();
         }
@@ -1853,10 +1916,10 @@ body {
     container.querySelectorAll('[data-practice-down]').forEach(btn => {
       btn.addEventListener('click', function() {
         const i = parseInt(this.dataset.practiceDown);
-        if (i < practicePlan.entries.length - 1) {
-          const temp = practicePlan.entries[i];
-          practicePlan.entries[i] = practicePlan.entries[i + 1];
-          practicePlan.entries[i + 1] = temp;
+        if (i < plan.entries.length - 1) {
+          const temp = plan.entries[i];
+          plan.entries[i] = plan.entries[i + 1];
+          plan.entries[i + 1] = temp;
           savePracticePlan();
           renderPracticePlan();
         }
@@ -1866,7 +1929,7 @@ body {
     container.querySelectorAll('[data-practice-remove]').forEach(btn => {
       btn.addEventListener('click', function() {
         const i = parseInt(this.dataset.practiceRemove);
-        practicePlan.entries.splice(i, 1);
+        plan.entries.splice(i, 1);
         savePracticePlan();
         renderPracticePlan();
       });
@@ -1876,12 +1939,13 @@ body {
   function exportPracticePDF() {
     const { jsPDF } = window.jspdf;
     const lib = loadLibrary();
+    const plan = getActivePlan();
 
     const pdfW = 297; // A4 landscape width mm
     const pdfH = 210; // A4 landscape height mm
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-    const planTitle = practicePlan.title || 'Practice Plan';
+    const planTitle = plan.title || 'Practice Plan';
 
     // ---- Page 1: Overview ----
     doc.setFontSize(20);
@@ -1907,14 +1971,20 @@ body {
     doc.setFontSize(10);
 
     let totalMinutes = 0;
-    practicePlan.entries.forEach((entry, idx) => {
+    plan.entries.forEach((entry, idx) => {
       if (tableY > pdfH - 30) {
         doc.addPage();
         tableY = 20;
       }
 
-      const drill = lib.drills.find(d => d.id === entry.drillId);
-      const drillTitle = drill ? (drill.title || 'Untitled Drill') : '(Deleted Drill)';
+      const entryType = entry.type || 'drill';
+      let entryTitle;
+      if (entryType === 'break') {
+        entryTitle = entry.label || 'Water Break';
+      } else {
+        const drill = lib.drills.find(d => d.id === entry.drillId);
+        entryTitle = drill ? (drill.title || 'Untitled Drill') : '(Deleted Drill)';
+      }
       totalMinutes += (entry.duration || 0);
 
       // Alternating row background
@@ -1924,7 +1994,13 @@ body {
       }
 
       doc.text(String(idx + 1), tableX + 2, tableY);
-      doc.text(drillTitle.substring(0, 50), tableX + colWidths.num + 2, tableY);
+      if (entryType === 'break') {
+        doc.setFont(undefined, 'italic');
+      }
+      doc.text(entryTitle.substring(0, 50), tableX + colWidths.num + 2, tableY);
+      if (entryType === 'break') {
+        doc.setFont(undefined, 'normal');
+      }
       doc.text((entry.duration || 0) + ' min', tableX + colWidths.num + colWidths.name + 2, tableY);
 
       // Wrap notes text
@@ -1950,8 +2026,11 @@ body {
       doc.setTextColor(0);
     }
 
-    // ---- Subsequent pages: one per drill ----
-    practicePlan.entries.forEach((entry, idx) => {
+    // ---- Subsequent pages: one per drill (skip breaks) ----
+    plan.entries.forEach((entry, idx) => {
+      const entryType = entry.type || 'drill';
+      if (entryType === 'break') return; // breaks don't get detail pages
+
       const drill = lib.drills.find(d => d.id === entry.drillId);
       if (!drill) return;
 
@@ -2011,6 +2090,8 @@ body {
     doc.save(planTitle.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf');
   }
 
+  let deletePlanPending = false;
+
   function setupPractice() {
     document.getElementById('btn-add-to-practice').addEventListener('click', function() {
       const select = document.getElementById('practice-add-drill');
@@ -2021,11 +2102,65 @@ body {
       }
     });
 
+    document.getElementById('btn-add-break-to-practice').addEventListener('click', function() {
+      addBreakToPractice();
+    });
+
     document.getElementById('btn-export-practice-pdf').addEventListener('click', exportPracticePDF);
 
     document.getElementById('practice-title').addEventListener('input', function() {
-      practicePlan.title = this.value;
+      getActivePlan().title = this.value;
       savePracticePlan();
+      renderPlanSelector();
+    });
+
+    document.getElementById('practice-plan-select').addEventListener('change', function() {
+      activePlanIndex = parseInt(this.value) || 0;
+      const lib = loadLibrary();
+      saveLibrary(lib);
+      renderPracticePlan();
+    });
+
+    document.getElementById('btn-new-plan').addEventListener('click', function() {
+      practicePlans.push({ id: generateId(), title: '', entries: [] });
+      activePlanIndex = practicePlans.length - 1;
+      savePracticePlan();
+      renderPracticePlan();
+    });
+
+    const deletePlanBtn = document.getElementById('btn-delete-plan');
+    deletePlanBtn.addEventListener('click', function() {
+      if (practicePlans.length <= 1) {
+        // Don't delete the last plan — reset it instead
+        practicePlans[0] = { id: generateId(), title: '', entries: [] };
+        activePlanIndex = 0;
+        savePracticePlan();
+        renderPracticePlan();
+        return;
+      }
+      if (!deletePlanPending) {
+        deletePlanPending = true;
+        deletePlanBtn.textContent = 'Confirm Delete?';
+        deletePlanBtn.style.background = 'var(--danger)';
+        deletePlanBtn.style.color = '#fff';
+        setTimeout(() => {
+          deletePlanPending = false;
+          deletePlanBtn.textContent = 'Delete Plan';
+          deletePlanBtn.style.background = '';
+          deletePlanBtn.style.color = 'var(--danger)';
+        }, 3000);
+        return;
+      }
+      deletePlanPending = false;
+      deletePlanBtn.textContent = 'Delete Plan';
+      deletePlanBtn.style.background = '';
+      deletePlanBtn.style.color = 'var(--danger)';
+      practicePlans.splice(activePlanIndex, 1);
+      if (activePlanIndex >= practicePlans.length) {
+        activePlanIndex = practicePlans.length - 1;
+      }
+      savePracticePlan();
+      renderPracticePlan();
     });
   }
 
@@ -2066,10 +2201,14 @@ body {
   let currentTags = [];
 
   // ==================== PRACTICE PLAN DATA ====================
-  let practicePlan = {
-    title: '',
-    entries: [] // { drillId, duration (minutes), notes }
-  };
+  let practicePlans = [
+    { id: generateId(), title: '', entries: [] }
+  ];
+  let activePlanIndex = 0;
+
+  function getActivePlan() {
+    return practicePlans[activePlanIndex] || practicePlans[0];
+  }
 
   function renderTagChips() {
     const container = document.getElementById('tag-chips');
