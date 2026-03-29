@@ -2647,13 +2647,26 @@ body {
     const rinkW = CONFIG.RINK_W * s;
     const rinkH = CONFIG.RINK_H * s;
 
-    // Ice background — offset by padding and view offset, inset by half border so stroke stays inside
+    // Ice fill (no border) — rendered first, behind everything
     const ice = new fabric.Rect({
       left: p + bw / 2 - vOff, top: p + bw / 2,
       width: rinkW - bw,
       height: rinkH - bw,
       rx: cr, ry: cr,
       fill: '#f0f4f8',
+      stroke: 'transparent',
+      strokeWidth: 0,
+      selectable: false, evented: false,
+      _isRink: true
+    });
+
+    // Border frame (stroke only, no fill) — rendered last, on top of all rink markings
+    const borderFrame = new fabric.Rect({
+      left: p + bw / 2 - vOff, top: p + bw / 2,
+      width: rinkW - bw,
+      height: rinkH - bw,
+      rx: cr, ry: cr,
+      fill: 'transparent',
       stroke: '#212121',
       strokeWidth: bw,
       selectable: false, evented: false,
@@ -2682,12 +2695,24 @@ body {
     );
 
     // Goal lines — 11ft from each end (NHL standard)
+    // Shorten goal lines to account for corner radius so they don't poke past the border
+    const cornerR = CONFIG.RINK_CORNER_RADIUS;
+    function goalLineInset(xFromEdge) {
+      // If the line is within the corner radius zone, calculate the circular inset
+      if (xFromEdge < cornerR) {
+        const dx = cornerR - xFromEdge;
+        return cornerR - Math.sqrt(cornerR * cornerR - dx * dx);
+      }
+      return 0;
+    }
+    const goalInsetL = goalLineInset(11) * s;
+    const goalInsetR = goalLineInset(11) * s; // symmetric
     const goalLineL = new fabric.Line(
-      [p + 11 * s - vOff, lineTop, p + 11 * s - vOff, lineBot],
+      [p + 11 * s - vOff, lineTop + goalInsetL, p + 11 * s - vOff, lineBot - goalInsetL],
       { stroke: '#d32f2f', strokeWidth: 1 * s, selectable: false, evented: false, _isRink: true }
     );
     const goalLineR = new fabric.Line(
-      [p + 189 * s - vOff, lineTop, p + 189 * s - vOff, lineBot],
+      [p + 189 * s - vOff, lineTop + goalInsetR, p + 189 * s - vOff, lineBot - goalInsetR],
       { stroke: '#d32f2f', strokeWidth: 1 * s, selectable: false, evented: false, _isRink: true }
     );
 
@@ -2785,7 +2810,8 @@ body {
 
     canvas.add(ice, centerLine, blueLeft, blueRight, goalLineL, goalLineR,
       centerCircle, centerDot,
-      ...faceoffCircles, ...faceoffDots, ...neutralDots, creaseL, creaseR);
+      ...faceoffCircles, ...faceoffDots, ...neutralDots, creaseL, creaseR,
+      borderFrame);
     canvas.renderAll();
   }
 
