@@ -10,7 +10,8 @@
 - [x] Collapsible category sections sorted by last modified
 - [x] Drill count badges per category
 - [x] Drill cards — title, description (truncated), tags, relative date
-- [x] Actions per drill — Open, Duplicate, Delete, Export JSON
+- [x] Drill thumbnail previews (static rink snapshots, cached, lazy-rendered)
+- [x] Actions per drill — Open, Duplicate, Delete, Export JSON (all with confirm)
 - [x] Uncategorized section for untagged drills
 - [x] New Category button, inline rename (double-click), delete
 
@@ -29,13 +30,13 @@
 - [x] Migration from v2 single-drill format
 
 ## Export/Import
-- [x] Full library export as one JSON file
+- [x] Full library export as one JSON file (with confirm)
 - [x] Library import — merge or replace
-- [x] Individual drill JSON export (v2 compatible)
+- [x] Individual drill JSON export (with confirm)
 - [x] Individual drill JSON import adds to library
+- [x] Print Cards — 1/2/4 per page, team name header, page numbers
 
 ## Future
-- [ ] Drill thumbnail previews in library cards
 - [ ] Drag-and-drop reordering of drills
 - [ ] Drill templates — pre-built starter drills
 - [ ] Bulk select and delete/export drills

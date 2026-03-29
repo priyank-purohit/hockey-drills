@@ -6,6 +6,7 @@
 - [x] Canvas rink image
 - [x] Configurable watermark/footer text
 - [x] Uses current view aspect ratio
+- [x] Double-tap confirm before download
 
 ## Practice Cards (Library)
 - [x] Print Cards button in Library tab
@@ -16,21 +17,21 @@
 - [x] Footer — page numbers
 - [x] Team name persists in localStorage
 - [x] Filtered by search if active
+- [x] Double-tap confirm before download
 
 ## Action Confirmations
-- [x] Save JSON — double-tap confirm (first tap shows "Confirm?", auto-cancels after 3s)
-- [x] PDF export — double-tap confirm
-- [x] Reset — double-tap confirm
+- [x] All file-download actions require double-tap confirm
+- [x] First tap shows "Confirm?", auto-cancels after 3 seconds
+- [x] Applies to: Save JSON, PDF, Export Library, Print Cards, Practice PDF, per-drill Export
 
 ## JSON Export/Import
-- [x] Individual drill export (v2 semantic format)
+- [x] Individual drill export (v2 semantic format, with confirm)
 - [x] Individual drill import (adds to library)
-- [x] Full library export (all categories + drills)
+- [x] Full library export (all categories + drills, with confirm)
 - [x] Library import — merge or replace
 
 ## Future
-- [ ] Select specific drills to include in print cards (checkboxes)
+- [ ] Select specific drills for print cards (checkboxes)
 - [ ] Include/exclude description toggle
-- [ ] Practice plan schedule as first page of card export
 - [ ] PNG export of single drill
 - [ ] SVG export for vector editing
