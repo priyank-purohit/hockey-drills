@@ -5085,7 +5085,7 @@ html[data-theme="dark"] {
   function updateLastUpdated() {
     const el = document.getElementById('last-updated');
     if (!el) return;
-    el.textContent = 'Mar 29, 2026, 09:12 AM'; // AUTO_TIMESTAMP
+    el.textContent = 'Mar 29, 2026, 09:31 AM'; // AUTO_TIMESTAMP
   }
 
   // ==================== PERSISTENCE (LIBRARY-AWARE) ====================
@@ -5296,7 +5296,7 @@ html[data-theme="dark"] {
       if (hasPuck) {
         puckDot = new fabric.Circle({
           left: startPx.x, top: startPx.y,
-          radius: 1.5 * s, fill: '#212121',
+          radius: 1.5 * s, fill: (line.lineType === 'shoot') ? '#d32f2f' : '#212121',
           originX: 'center', originY: 'center',
           selectable: false, evented: false
         });
