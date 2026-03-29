@@ -12,10 +12,16 @@
 - [x] Library structure: categories, drills, active drill, practice plans, team name
 - [x] Migration from v2 single-drill to v3 library format
 - [x] No artificial limits on categories or drills
+- [x] Default sample drill ("Game warm up") for new users
+- [x] beforeunload warning when drill has items on canvas
+
+## Offline
+- [x] Service worker (sw.js) — caches HTML + CDN assets
+- [x] Network-first for HTML, cache-first for CDN
+- [x] App works offline after first load
 
 ## Future
 - [ ] Cloud sync (Firebase/Supabase) for cross-device access
 - [ ] Account system for coaches
-- [ ] Offline-first with service worker
 - [ ] Auto-backup to file on a schedule
 - [ ] Storage usage indicator with cleanup suggestions
