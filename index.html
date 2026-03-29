@@ -2660,9 +2660,9 @@ body {
       _isRink: true
     });
 
-    // Lines extend from inner edge of boards to inner edge (bw/2 for seamless look)
-    const lineTop = p + bw / 2;
-    const lineBot = p + rinkH - bw / 2;
+    // Lines extend from inner edge of boards (stop at bw so they don't overlap the border)
+    const lineTop = p + bw;
+    const lineBot = p + rinkH - bw;
 
     // Center red line (x = 100)
     const centerLine = new fabric.Line(
