@@ -122,6 +122,25 @@ body {
   display: block;
 }
 
+/* ========== Help ========== */
+.help-section {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.help-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.help-section p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
 /* ========== Title & Description ========== */
 .drill-header {
   display: flex;
@@ -774,6 +793,7 @@ body {
     <button class="tab-btn active" data-tab="editor">Editor</button>
     <button class="tab-btn" data-tab="library">Library</button>
     <button class="tab-btn" data-tab="practice">Practice Plan</button>
+    <button class="tab-btn" data-tab="help">Help</button>
   </div>
   <div class="breadcrumb-bar" id="breadcrumb">
     Editing: <span class="breadcrumb-title" id="breadcrumb-title">Untitled Drill</span>
@@ -919,6 +939,68 @@ body {
           <option value="">Select a drill to add...</option>
         </select>
         <button class="action-btn" id="btn-add-to-practice">+ Add Drill</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help -->
+  <div class="tab-content" id="tab-help">
+    <div style="max-width:720px;">
+      <h2 style="font-size:18px;font-weight:600;margin-bottom:16px;">Quick Guide</h2>
+
+      <div class="help-section">
+        <h3>Drawing Lines</h3>
+        <p>Select a line tool (Skate, Puck, Pass, Shoot), then <strong>click once</strong> on the rink to set the start point, and <strong>click again</strong> to set the end point. The arrow appears at the end. A preview line follows your cursor between clicks.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Placing &amp; Moving Objects</h3>
+        <p>Select a player, net, pylon, or puck tool, then click on the rink to place it. To <strong>reposition</strong>, select the <strong>Move</strong> tool and drag any object. To <strong>delete</strong>, double-click (desktop) or long-press (mobile) on any object.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Text Annotations</h3>
+        <p>Select the <strong>A Text</strong> tool. A text input appears below the toolbar &mdash; type your annotation, then click on the rink to place it. The input stays active so you can place multiple labels.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Rink Views</h3>
+        <p>The <strong>Full / Left / Right / NZ</strong> buttons zoom into different zones. Your drill data is always stored in full-rink coordinates &mdash; switching views just changes what's visible. Objects placed in one view remain when you switch.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Animation Playback</h3>
+        <p>Click <strong>Play</strong> to watch lines animate sequentially in the order they were drawn. A dot traces each path, then the line appears. Click <strong>Stop</strong> to halt and restore. No tools work during playback.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Tags &amp; Categories</h3>
+        <p>Below the drill description, type a tag name and press Enter. Tags double as categories in the Library. A drill tagged "Skating" and "Warmup" appears in both category sections. Remove a tag by clicking its <strong>&times;</strong> button.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Share via Link</h3>
+        <p>Click <strong>Share</strong> to copy a URL containing the entire drill. Send it to another coach &mdash; opening the link imports the drill into their library automatically, tagged "Shared".</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Practice Plans</h3>
+        <p>The <strong>Practice Plan</strong> tab lets you build a session from your library drills. Set a duration and notes for each entry, reorder with arrows, and export as a multi-page PDF with an overview table plus one page per drill.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Print Cards</h3>
+        <p>In the Library tab, click <strong>Print Cards</strong> to generate a PDF with 2 drill cards per page &mdash; each card shows a rink thumbnail, title, tags, and description. Handy for printing and bringing to the rink.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Keyboard Shortcuts</h3>
+        <p><strong>ESC</strong> &mdash; deselect tool &nbsp;|&nbsp; <strong>Ctrl/Cmd+Z</strong> &mdash; undo &nbsp;|&nbsp; <strong>Ctrl/Cmd+Y</strong> &mdash; redo</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Data &amp; Storage</h3>
+        <p>Everything is saved in your browser's local storage &mdash; no accounts, no cloud. Use <strong>Export Library</strong> to back up all drills as one JSON file. Use <strong>Import Library</strong> to restore (merge or replace). Individual drills can also be exported/imported as JSON.</p>
       </div>
     </div>
   </div>
