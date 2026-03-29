@@ -1,0 +1,10 @@
+#!/bin/sh
+# Auto-update the "Last updated" timestamp in index.html before each commit
+
+TIMESTAMP=$(date '+%b %d, %Y, %I:%M %p')
+
+# Only update if index.html is staged
+if git diff --cached --name-only | grep -q 'index.html'; then
+  sed -i '' "s/el\.textContent = '.*';/el.textContent = '${TIMESTAMP}';/" index.html
+  git add index.html
+fi
