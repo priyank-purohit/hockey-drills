@@ -856,6 +856,7 @@ body {
 
         <button class="action-btn" id="btn-undo" title="Undo (Ctrl+Z)" disabled>&#8630; Undo</button>
         <button class="action-btn" id="btn-redo" title="Redo (Ctrl+Y)" disabled>&#8631; Redo</button>
+        <button class="action-btn" id="btn-play" title="Play drill animation">&#9654; Play</button>
 
         <div class="toolbar-divider"></div>
 
@@ -1973,6 +1974,11 @@ body {
   let historyIndex = -1;
   let suppressHistory = false;
 
+  // Animation state
+  let isAnimating = false;
+  let animationTimer = null;
+  let savedItemsForAnimation = null;
+
   // Long-press tracking
   let longPressTimer = null;
   let longPressTarget = null;
@@ -2294,6 +2300,7 @@ body {
   }
 
   function onCanvasMouseDown(opt) {
+    if (isAnimating) return;
     if (!activeTool) return;
     const pointer = canvas.getPointer(opt.e);
 
@@ -2312,6 +2319,7 @@ body {
   }
 
   function onCanvasDblClick(opt) {
+    if (isAnimating) return;
     const target = opt.target;
     if (target && !target._isRink && !target._isRinkBg) {
       deleteObject(target);
@@ -3005,6 +3013,7 @@ body {
   function setupActions() {
     document.getElementById('btn-undo').addEventListener('click', undo);
     document.getElementById('btn-redo').addEventListener('click', redo);
+    document.getElementById('btn-play').addEventListener('click', playAnimation);
 
     const resetBtn = document.getElementById('btn-reset');
     let resetPending = false;
@@ -3288,6 +3297,125 @@ body {
         return;
       }
     });
+  }
+
+  // ==================== ANIMATION ====================
+  function playAnimation() {
+    if (isAnimating) { stopAnimation(); return; }
+
+    savedItemsForAnimation = serializeDrill();
+    isAnimating = true;
+
+    const btn = document.getElementById('btn-play');
+    btn.innerHTML = '&#9724; Stop';
+
+    // Cancel any active tool/line drawing
+    deselectTool();
+
+    const items = savedItemsForAnimation;
+    const objects = items.filter(function(i) { return i.kind === 'object'; });
+    const lines = items.filter(function(i) { return i.kind === 'line'; });
+
+    // Render only objects first (no lines)
+    suppressHistory = true;
+    canvas.clear();
+    drawDefaultRink();
+    objects.forEach(function(item) {
+      var obj = placeObject(item.objectType, {x: item.x, y: item.y}, item.colour, item.index, item.text);
+      if (obj) canvas.add(obj);
+    });
+    canvas.renderAll();
+    suppressHistory = false;
+
+    // Animate lines sequentially
+    var lineIndex = 0;
+
+    function animateNextLine() {
+      if (!isAnimating || lineIndex >= lines.length) {
+        stopAnimation();
+        return;
+      }
+
+      var line = lines[lineIndex];
+      var s = scaleFactor;
+      var p = CONFIG.RINK_PADDING;
+      var vc = getViewConfig();
+      var startPx = { x: (line.startX - vc.logX) * s + p, y: (line.startY - vc.logY) * s + p };
+      var endPx = { x: (line.endX - vc.logX) * s + p, y: (line.endY - vc.logY) * s + p };
+
+      // Create a moving dot
+      var dot = new fabric.Circle({
+        left: startPx.x, top: startPx.y,
+        radius: 3 * s,
+        fill: line.colour,
+        originX: 'center', originY: 'center',
+        selectable: false, evented: false
+      });
+      canvas.add(dot);
+
+      var duration = 800;
+      var startTime = Date.now();
+
+      function frame() {
+        if (!isAnimating) { canvas.remove(dot); return; }
+
+        var elapsed = Date.now() - startTime;
+        var t = Math.min(elapsed / duration, 1);
+
+        // Ease-in-out
+        var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+        dot.set({
+          left: startPx.x + (endPx.x - startPx.x) * eased,
+          top: startPx.y + (endPx.y - startPx.y) * eased
+        });
+        canvas.renderAll();
+
+        if (t < 1) {
+          animationTimer = requestAnimationFrame(frame);
+        } else {
+          // Done with this line - draw the full line and remove dot
+          canvas.remove(dot);
+          createLine(line.lineType,
+            { x: line.startX, y: line.startY },
+            { x: line.endX, y: line.endY },
+            line.colour);
+          lineIndex++;
+          // Small pause before next
+          animationTimer = setTimeout(animateNextLine, 200);
+        }
+      }
+
+      animationTimer = requestAnimationFrame(frame);
+    }
+
+    // Start after brief delay
+    animationTimer = setTimeout(animateNextLine, 500);
+  }
+
+  function stopAnimation() {
+    isAnimating = false;
+    if (animationTimer) {
+      cancelAnimationFrame(animationTimer);
+      clearTimeout(animationTimer);
+      animationTimer = null;
+    }
+
+    var btn = document.getElementById('btn-play');
+    btn.innerHTML = '&#9654; Play';
+
+    // Restore full drill
+    if (savedItemsForAnimation) {
+      suppressHistory = true;
+      renderDrill(savedItemsForAnimation);
+      suppressHistory = false;
+      savedItemsForAnimation = null;
+    }
+
+    // Re-enable move mode if it was active
+    if (activeTool === 'move') {
+      enableMoveMode();
+    }
   }
 
   // ==================== STATUS ====================
