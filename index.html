@@ -940,7 +940,13 @@ body {
     <div class="library-footer">
       <button class="action-btn" id="btn-export-library">&#128190; Export Library</button>
       <button class="action-btn" id="btn-import-library">&#128194; Import Library</button>
-      <button class="action-btn" id="btn-print-cards" title="Print drill cards (2 per page)">&#128424; Print Cards</button>
+      <button class="action-btn" id="btn-print-cards" title="Print drill cards">&#128424; Print Cards</button>
+      <select id="print-layout" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:var(--font);font-size:12px;">
+        <option value="1">1 per page</option>
+        <option value="2" selected>2 per page</option>
+        <option value="4">4 per page</option>
+      </select>
+      <input type="text" id="print-team-name" placeholder="Team name (optional)" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:var(--font);font-size:12px;width:200px;" />
       <input type="file" id="file-library-import" accept=".json,application/json" style="display:none" />
     </div>
   </div>
@@ -1004,7 +1010,7 @@ body {
 
       <div class="help-section">
         <h3>Print Cards</h3>
-        <p>In the Library tab, click <strong>Print Cards</strong> to generate a PDF with 2 drill cards per page &mdash; each card shows a rink thumbnail, title, tags, and description. Handy for printing and bringing to the rink.</p>
+        <p>In the Library tab, click <strong>Print Cards</strong> to generate a PDF with drill cards &mdash; choose 1, 2, or 4 cards per page using the layout selector. Each card shows a rink thumbnail, title, tags, and description. Optionally enter a team name to add a header with team name and date on each page. Handy for printing and bringing to the rink.</p>
       </div>
 
       <div class="help-section">
@@ -1462,62 +1468,211 @@ body {
     suppressHistory = false;
     if (activeTool === 'move') enableMoveMode();
 
-    // Generate PDF — landscape A4, 2 cards per page
+    // Read layout and header/footer settings
+    const layout = parseInt(document.getElementById('print-layout').value);
+    const teamName = document.getElementById('print-team-name').value.trim();
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+    // Save team name to library for persistence
+    if (teamName !== (lib.teamName || '')) {
+      lib.teamName = teamName;
+      saveLibrary(lib);
+    }
+
+    // Generate PDF — landscape A4
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageW = 297;
     const pageH = 210;
     const margin = 10;
-    const cardH = (pageH - margin * 3) / 2; // 2 cards stacked vertically
-    const cardW = pageW - margin * 2;
+    const headerH = 5; // space reserved for header
+    const footerH = 5; // space reserved for footer
+    const contentTop = margin + headerH;
+    const contentBottom = pageH - margin - footerH;
+    const contentH = contentBottom - contentTop;
+
+    // Compute card dimensions based on layout
+    let cardW, cardH, cardsPerPage;
+    if (layout === 1) {
+      cardW = pageW - margin * 2;
+      cardH = contentH;
+      cardsPerPage = 1;
+    } else if (layout === 4) {
+      cardW = (pageW - margin * 3) / 2;
+      cardH = (contentH - margin) / 2;
+      cardsPerPage = 4;
+    } else {
+      // layout === 2 (default)
+      cardW = pageW - margin * 2;
+      cardH = (contentH - margin) / 2;
+      cardsPerPage = 2;
+    }
+
+    function drawHeaderFooter(pageNum) {
+      // Header
+      if (teamName) {
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(100);
+        doc.text(teamName, margin, margin + 2);
+      }
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(100);
+      doc.text(dateStr, pageW - margin, margin + 2, { align: 'right' });
+
+      // Footer
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(100);
+      doc.text('Page ' + pageNum, pageW / 2, pageH - 4, { align: 'center' });
+    }
+
+    let pageNum = 1;
+    drawHeaderFooter(pageNum);
 
     for (let i = 0; i < drillImages.length; i++) {
       const drill = drillImages[i];
-      const isTop = (i % 2 === 0);
+      const indexOnPage = i % cardsPerPage;
 
-      if (i > 0 && isTop) {
+      // New page when needed
+      if (i > 0 && indexOnPage === 0) {
         doc.addPage();
+        pageNum++;
+        drawHeaderFooter(pageNum);
       }
 
-      const cardY = isTop ? margin : margin + cardH + margin;
+      // Compute card position
+      let cardX, cardY;
+      if (layout === 1) {
+        cardX = margin;
+        cardY = contentTop;
+      } else if (layout === 4) {
+        const col = indexOnPage % 2;
+        const row = Math.floor(indexOnPage / 2);
+        cardX = margin + col * (cardW + margin);
+        cardY = contentTop + row * (cardH + margin);
+      } else {
+        // layout === 2
+        cardX = margin;
+        cardY = contentTop + indexOnPage * (cardH + margin);
+      }
 
       // Card border
       doc.setDrawColor(200);
       doc.setLineWidth(0.3);
-      doc.roundedRect(margin, cardY, cardW, cardH, 3, 3);
+      doc.roundedRect(cardX, cardY, cardW, cardH, 3, 3);
 
-      // Rink image — left side of card
-      const imgW = cardH * (200 / 85) * 0.55;
-      const imgH = cardH * 0.55;
-      const imgX = margin + 5;
-      const imgY = cardY + 5;
-      doc.addImage(drill.image, 'PNG', imgX, imgY, imgW, imgH);
+      if (layout === 1) {
+        // Full-page layout: large rink image on top, text below
+        const imgAspect = 200 / 85;
+        const imgW = cardW - 10;
+        const imgH = Math.min(imgW / imgAspect, cardH * 0.6);
+        const imgX = cardX + 5;
+        const imgY = cardY + 5;
+        doc.addImage(drill.image, 'PNG', imgX, imgY, imgW, imgH);
 
-      // Text — right side
-      const textX = imgX + imgW + 8;
-      const textW = cardW - imgW - 23;
+        const textX = cardX + 8;
+        const textW = cardW - 16;
+        let textY = imgY + imgH + 8;
 
-      // Title
-      doc.setFontSize(14);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(33);
-      doc.text(drill.title, textX, cardY + 12);
+        // Title
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(33);
+        doc.text(drill.title, textX, textY);
+        textY += 6;
 
-      // Tags
-      if (drill.tags.length > 0) {
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'normal');
-        doc.setTextColor(100);
-        doc.text(drill.tags.join(' \u2022 '), textX, cardY + 18);
-      }
+        // Tags
+        if (drill.tags.length > 0) {
+          doc.setFontSize(9);
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(100);
+          doc.text(drill.tags.join(' \u2022 '), textX, textY);
+          textY += 5;
+        }
 
-      // Description
-      if (drill.description) {
+        // Description
+        if (drill.description) {
+          doc.setFontSize(11);
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(66);
+          const lines = doc.splitTextToSize(drill.description, textW);
+          const maxLines = Math.floor((cardY + cardH - textY - 3) / 5);
+          doc.text(lines.slice(0, Math.max(maxLines, 2)), textX, textY);
+        }
+      } else if (layout === 4) {
+        // 2x2 grid: compact cards
+        const imgAspect = 200 / 85;
+        const imgH = cardH * 0.5;
+        const imgW = Math.min(imgH * imgAspect, cardW - 10);
+        const imgX = cardX + (cardW - imgW) / 2;
+        const imgY = cardY + 3;
+        doc.addImage(drill.image, 'PNG', imgX, imgY, imgW, imgH);
+
+        const textX = cardX + 5;
+        const textW = cardW - 10;
+        let textY = imgY + imgH + 4;
+
+        // Title
         doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
-        doc.setTextColor(66);
-        const lines = doc.splitTextToSize(drill.description, textW);
-        doc.text(lines.slice(0, 6), textX, cardY + 25); // max 6 lines
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(33);
+        const titleLines = doc.splitTextToSize(drill.title, textW);
+        doc.text(titleLines.slice(0, 1), textX, textY);
+        textY += 4;
+
+        // Tags
+        if (drill.tags.length > 0) {
+          doc.setFontSize(6);
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(100);
+          doc.text(drill.tags.join(' \u2022 '), textX, textY);
+          textY += 3;
+        }
+
+        // Description (short)
+        if (drill.description) {
+          doc.setFontSize(7);
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(66);
+          const lines = doc.splitTextToSize(drill.description, textW);
+          const maxLines = Math.floor((cardY + cardH - textY - 2) / 3);
+          doc.text(lines.slice(0, Math.max(maxLines, 2)), textX, textY);
+        }
+      } else {
+        // layout === 2: two cards stacked (original layout with header offset)
+        const imgW = cardH * (200 / 85) * 0.55;
+        const imgH = cardH * 0.55;
+        const imgX = cardX + 5;
+        const imgY = cardY + 5;
+        doc.addImage(drill.image, 'PNG', imgX, imgY, imgW, imgH);
+
+        const textX = imgX + imgW + 8;
+        const textW = cardW - imgW - 23;
+
+        // Title
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(33);
+        doc.text(drill.title, textX, cardY + 12);
+
+        // Tags
+        if (drill.tags.length > 0) {
+          doc.setFontSize(8);
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(100);
+          doc.text(drill.tags.join(' \u2022 '), textX, cardY + 18);
+        }
+
+        // Description
+        if (drill.description) {
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(66);
+          const lines = doc.splitTextToSize(drill.description, textW);
+          doc.text(lines.slice(0, 6), textX, cardY + 25);
+        }
       }
     }
 
@@ -3655,6 +3810,19 @@ body {
 
   function setupLibraryActions() {
     document.getElementById('library-search').addEventListener('input', renderLibrary);
+
+    // Restore team name from library
+    const _lib = loadLibrary();
+    if (_lib.teamName) {
+      document.getElementById('print-team-name').value = _lib.teamName;
+    }
+
+    // Persist team name on change
+    document.getElementById('print-team-name').addEventListener('change', function() {
+      const lib = loadLibrary();
+      lib.teamName = this.value.trim();
+      saveLibrary(lib);
+    });
 
     document.getElementById('btn-new-category').addEventListener('click', () => {
       const name = prompt('New category name:');
