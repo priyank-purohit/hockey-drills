@@ -203,8 +203,8 @@ body {
 
 .drill-header textarea {
   resize: vertical;
-  min-height: 40px;
-  max-height: 120px;
+  min-height: 60px;
+  max-height: 300px;
 }
 
 /* ========== Tags Section ========== */
@@ -953,7 +953,7 @@ html[data-theme="dark"] {
     <!-- Drill Title & Description -->
     <div class="drill-header">
       <input type="text" id="drill-title" placeholder="Drill Title" />
-      <textarea id="drill-description" placeholder="Drill description..." rows="1"></textarea>
+      <textarea id="drill-description" placeholder="Drill description and step-by-step instructions..." rows="3"></textarea>
       <!-- Tags -->
       <div class="tags-section" id="tags-section">
         <span class="tag-label">Tags</span>
@@ -1052,9 +1052,9 @@ html[data-theme="dark"] {
         <button class="action-btn" id="btn-load-json" title="Load JSON">&#128194; Load</button>
         <button class="action-btn" id="btn-export-pdf" title="Export PDF">&#128196; PDF</button>
         <button class="action-btn" id="btn-share" title="Share drill via link">&#128279; Share</button>
+        <button class="action-btn" id="btn-export-png" title="Export as PNG">&#128444; PNG</button>
         <button class="action-btn" id="btn-upload-bg" title="Upload rink background">&#128247; BG</button>
         <button class="action-btn" id="btn-fullscreen" title="Fullscreen rink">&#x26F6; Full</button>
-        <input type="file" id="file-bg" accept="image/*" style="display:none" />
         <input type="file" id="file-json" accept=".json,application/json" style="display:none" />
       </div>
     </div>
@@ -1075,12 +1075,16 @@ html[data-theme="dark"] {
       </select>
     </div>
 
+    <div id="bg-url-bar" style="display:none;margin-bottom:8px;">
+      <input type="text" id="bg-url-input" placeholder="Paste rink background image URL and press Enter..." style="width:100%;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:var(--font);font-size:13px;" />
+    </div>
+
     <!-- Canvas -->
     <div class="fullscreen-exit-bar">
       <button class="action-btn" id="btn-exit-fullscreen">&#x2715; Exit Fullscreen</button>
     </div>
     <div class="canvas-container-wrapper" id="canvas-wrapper">
-      <div class="line-preview-hint" id="line-hint">Click on rink to set end point</div>
+      <div class="line-preview-hint" id="line-hint">Click to add points, double-click to finish</div>
       <canvas id="rink-canvas"></canvas>
     </div>
 
@@ -1622,7 +1626,8 @@ html[data-theme="dark"] {
     if (search) {
       drills = drills.filter(d =>
         (d.title || '').toLowerCase().includes(search) ||
-        (d.description || '').toLowerCase().includes(search)
+        (d.description || '').toLowerCase().includes(search) ||
+        (d.tags || []).some(t => t.toLowerCase().includes(search))
       );
     }
 
@@ -2226,52 +2231,67 @@ html[data-theme="dark"] {
     // Render drill items
     (drill.items || []).forEach(function(item) {
       if (item.kind === 'line') {
-        var start = { x: rx(item.startX), y: ry(item.startY) };
-        var end = { x: rx(item.endX), y: ry(item.endY) };
-        var dx = end.x - start.x;
-        var dy = end.y - start.y;
-        var len = Math.sqrt(dx * dx + dy * dy);
-        var arrowLen = CONFIG.ARROW_SIZE * s;
-        var shortenEnd = len > arrowLen ? {
-          x: end.x - (dx / len) * arrowLen,
-          y: end.y - (dy / len) * arrowLen
-        } : end;
+        // Support both multi-point and legacy 2-point format
+        var pts = item.points || [
+          { x: item.startX, y: item.startY },
+          { x: item.endX, y: item.endY }
+        ];
+        var pixPts = pts.map(function(pt) { return { x: rx(pt.x), y: ry(pt.y) }; });
         var sw = Math.max(0.8, 1 * s);
 
-        if (item.lineType === 'skate') {
-          fCanvas.add(new fabric.Line(
-            [start.x, start.y, shortenEnd.x, shortenEnd.y],
-            { stroke: item.colour, strokeWidth: sw, selectable: false, evented: false }
-          ));
-        } else if (item.lineType === 'pass') {
-          fCanvas.add(new fabric.Line(
-            [start.x, start.y, shortenEnd.x, shortenEnd.y],
-            { stroke: item.colour, strokeWidth: sw, strokeDashArray: [3*s, 3*s], selectable: false, evented: false }
-          ));
-        } else if (item.lineType === 'shoot') {
-          fCanvas.add(new fabric.Line(
-            [start.x, start.y, shortenEnd.x, shortenEnd.y],
-            { stroke: item.colour, strokeWidth: sw, strokeDashArray: [6*s, 3*s], selectable: false, evented: false }
-          ));
-        } else if (item.lineType === 'puck') {
-          // Simplified squiggly as a straight line with different dash
-          fCanvas.add(new fabric.Line(
-            [start.x, start.y, shortenEnd.x, shortenEnd.y],
-            { stroke: item.colour, strokeWidth: sw, strokeDashArray: [1.5*s, 1.5*s], selectable: false, evented: false }
-          ));
-        }
+        for (var si = 0; si < pixPts.length - 1; si++) {
+          var segStart = pixPts[si];
+          var segEnd = pixPts[si + 1];
+          var isLast = (si === pixPts.length - 2);
+          var dx = segEnd.x - segStart.x;
+          var dy = segEnd.y - segStart.y;
+          var len = Math.sqrt(dx * dx + dy * dy);
 
-        // Arrowhead
-        if (len > 2) {
-          var angle = Math.atan2(end.y - start.y, end.x - start.x);
-          var aSize = CONFIG.ARROW_SIZE * s;
-          var tip = end;
-          var p1 = { x: tip.x - aSize * Math.cos(angle - Math.PI/6), y: tip.y - aSize * Math.sin(angle - Math.PI/6) };
-          var p2 = { x: tip.x - aSize * Math.cos(angle + Math.PI/6), y: tip.y - aSize * Math.sin(angle + Math.PI/6) };
-          fCanvas.add(new fabric.Polygon(
-            [tip, p1, p2],
-            { fill: item.colour, stroke: item.colour, strokeWidth: 0.3 * s, selectable: false, evented: false }
-          ));
+          var drawEnd = segEnd;
+          if (isLast) {
+            var arrowLen = CONFIG.ARROW_SIZE * s;
+            if (len > arrowLen) {
+              drawEnd = {
+                x: segEnd.x - (dx / len) * arrowLen,
+                y: segEnd.y - (dy / len) * arrowLen
+              };
+            }
+          }
+
+          if (item.lineType === 'skate') {
+            fCanvas.add(new fabric.Line(
+              [segStart.x, segStart.y, drawEnd.x, drawEnd.y],
+              { stroke: item.colour, strokeWidth: sw, selectable: false, evented: false }
+            ));
+          } else if (item.lineType === 'pass') {
+            fCanvas.add(new fabric.Line(
+              [segStart.x, segStart.y, drawEnd.x, drawEnd.y],
+              { stroke: item.colour, strokeWidth: sw, strokeDashArray: [3*s, 3*s], selectable: false, evented: false }
+            ));
+          } else if (item.lineType === 'shoot') {
+            fCanvas.add(new fabric.Line(
+              [segStart.x, segStart.y, drawEnd.x, drawEnd.y],
+              { stroke: item.colour, strokeWidth: sw, strokeDashArray: [6*s, 3*s], selectable: false, evented: false }
+            ));
+          } else if (item.lineType === 'puck') {
+            fCanvas.add(new fabric.Line(
+              [segStart.x, segStart.y, drawEnd.x, drawEnd.y],
+              { stroke: item.colour, strokeWidth: sw, strokeDashArray: [1.5*s, 1.5*s], selectable: false, evented: false }
+            ));
+          }
+
+          // Arrowhead only on last segment
+          if (isLast && len > 2) {
+            var angle = Math.atan2(segEnd.y - segStart.y, segEnd.x - segStart.x);
+            var aSize = CONFIG.ARROW_SIZE * s;
+            var tip = segEnd;
+            var p1 = { x: tip.x - aSize * Math.cos(angle - Math.PI/6), y: tip.y - aSize * Math.sin(angle - Math.PI/6) };
+            var p2 = { x: tip.x - aSize * Math.cos(angle + Math.PI/6), y: tip.y - aSize * Math.sin(angle + Math.PI/6) };
+            fCanvas.add(new fabric.Polygon(
+              [tip, p1, p2],
+              { fill: item.colour, stroke: item.colour, strokeWidth: 0.3 * s, selectable: false, evented: false }
+            ));
+          }
         }
       } else if (item.kind === 'object') {
         var px = rx(item.x);
@@ -2477,7 +2497,7 @@ html[data-theme="dark"] {
     container.innerHTML = html;
   }
 
-  function exportPracticePDF() {
+  async function exportPracticePDF() {
     const { jsPDF } = window.jspdf;
     const lib = loadLibrary();
     const plan = getActivePlan();
@@ -2487,6 +2507,33 @@ html[data-theme="dark"] {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
     const planTitle = plan.title || 'Practice Plan';
+
+    // Save current state and capture rink thumbnails for each drill entry
+    const currentItems = serializeDrill();
+    const currentView = rinkView;
+    rinkView = 'full';
+
+    const drillImages = {};
+    for (const entry of plan.entries) {
+      const entryType = entry.type || 'drill';
+      if (entryType === 'break') continue;
+      const drill = lib.drills.find(d => d.id === entry.drillId);
+      if (!drill || !drill.items || drill.items.length === 0) continue;
+      if (drillImages[drill.id]) continue; // already captured
+
+      suppressHistory = true;
+      renderDrill(drill.items || []);
+      suppressHistory = false;
+      await new Promise(r => setTimeout(r, 50));
+      drillImages[drill.id] = canvas.toDataURL({ format: 'png', multiplier: 1.5 });
+    }
+
+    // Restore current drill
+    rinkView = currentView;
+    suppressHistory = true;
+    renderDrill(currentItems);
+    suppressHistory = false;
+    if (activeTool === 'move') enableMoveMode();
 
     // ---- Page 1: Overview ----
     doc.setFontSize(20);
@@ -2602,16 +2649,28 @@ html[data-theme="dark"] {
         doc.setFont(undefined, 'normal');
       }
 
+      // Rink thumbnail if available
+      const drillImage = drillImages[drill.id];
+      if (drillImage) {
+        const imgAspect = 200 / 85;
+        const imgW = pdfW - 40;
+        const imgH = Math.min(imgW / imgAspect, pdfH - contentY - 40);
+        const imgX = (pdfW - imgW) / 2;
+        doc.addImage(drillImage, 'PNG', imgX, contentY, imgW, imgH);
+        contentY += imgH + 8;
+      }
+
       // Description
       if (drill.description) {
         doc.setFontSize(10);
         const descLines = doc.splitTextToSize(drill.description, pdfW - 40);
-        doc.text(descLines, 20, contentY);
-        contentY += descLines.length * 5 + 5;
+        const maxDescLines = Math.floor((pdfH - contentY - 15) / 5);
+        doc.text(descLines.slice(0, Math.max(maxDescLines, 3)), 20, contentY);
+        contentY += Math.min(descLines.length, maxDescLines) * 5 + 5;
       }
 
       // Tags
-      if (drill.tags && drill.tags.length > 0) {
+      if (drill.tags && drill.tags.length > 0 && contentY < pdfH - 20) {
         doc.setFontSize(9);
         doc.setTextColor(100);
         doc.text('Tags: ' + drill.tags.join(', '), 20, contentY);
@@ -3051,8 +3110,11 @@ html[data-theme="dark"] {
   let scaleFactor = 1;
   let activeTool = null;
   let activeColour = null; // null = use tool default
-  let lineStartPoint = null;
-  let linePreviewLine = null;
+  let lineWaypoints = [];
+  let linePreviewLines = [];
+  let linePreviewCurrent = null;
+  let lineLastClickTime = 0;
+  let lineJustFinished = false;
   let rinkView = 'full'; // 'full', 'left', 'right', 'neutral'
   let rinkRotated = false; // true when rink is rotated 90deg for mobile portrait
 
@@ -3594,14 +3656,17 @@ html[data-theme="dark"] {
   }
 
   function onCanvasMouseMove(opt) {
-    if (!lineStartPoint || !linePreviewLine) return;
+    if (lineWaypoints.length === 0 || !linePreviewCurrent) return;
     const pointer = canvas.getPointer(opt.e);
-    linePreviewLine.set({ x2: pointer.x, y2: pointer.y });
+    linePreviewCurrent.set({ x2: pointer.x, y2: pointer.y });
     canvas.renderAll();
   }
 
   function onCanvasDblClick(opt) {
     if (isAnimating) return;
+    // Don't delete objects when we're in the middle of drawing or just finished a line
+    if (lineWaypoints.length > 0) return;
+    if (lineJustFinished) { lineJustFinished = false; return; }
     const target = opt.target;
     if (target && !target._isRink && !target._isRinkBg) {
       // If it's a text annotation, enter edit mode instead of deleting
@@ -3670,103 +3735,183 @@ html[data-theme="dark"] {
 
   // ==================== LINE DRAWING ====================
   function handleLineClick(pointer) {
-    if (!lineStartPoint) {
-      lineStartPoint = { x: pointer.x, y: pointer.y };
+    const now = Date.now();
+    const isDoubleClick = (now - lineLastClickTime) < 300;
+    lineLastClickTime = now;
 
-      linePreviewLine = new fabric.Line(
+    if (lineWaypoints.length === 0) {
+      // First click: start a new line
+      lineWaypoints.push({ x: pointer.x, y: pointer.y });
+
+      linePreviewCurrent = new fabric.Line(
         [pointer.x, pointer.y, pointer.x, pointer.y],
         { stroke: '#999', strokeWidth: 1, strokeDashArray: [4, 4], selectable: false, evented: false, _isPreview: true }
       );
-      canvas.add(linePreviewLine);
+      canvas.add(linePreviewCurrent);
 
-      document.getElementById('line-hint').style.display = 'block';
+      const hint = document.getElementById('line-hint');
+      hint.textContent = 'Click to add points, double-click to finish';
+      hint.style.display = 'block';
+    } else if (isDoubleClick && lineWaypoints.length >= 2) {
+      // Double-click: finish the line (ignore the double-click point, use existing waypoints)
+      finishLineDrawing();
     } else {
-      const start = lineStartPoint;
-      const end = { x: pointer.x, y: pointer.y };
+      // Subsequent click: add waypoint
+      const newPoint = { x: pointer.x, y: pointer.y };
+      lineWaypoints.push(newPoint);
 
-      canvas.remove(linePreviewLine);
-      linePreviewLine = null;
-      document.getElementById('line-hint').style.display = 'none';
+      // Convert the current preview line into a fixed preview segment
+      if (linePreviewCurrent) {
+        linePreviewCurrent.set({ x2: newPoint.x, y2: newPoint.y });
+        linePreviewLines.push(linePreviewCurrent);
+      }
 
-      // Store logical coordinates (subtract padding before converting, add view offset)
-      const s = scaleFactor;
-      const p = CONFIG.RINK_PADDING;
-      const vc = getViewConfig();
-      const thicknessVal = document.getElementById('line-thickness') ? document.getElementById('line-thickness').value : 'medium';
-      createLine(activeTool,
-        { x: (start.x - p) / s + vc.logX, y: (start.y - p) / s + vc.logY },
-        { x: (end.x - p) / s + vc.logX, y: (end.y - p) / s + vc.logY },
-        getCurrentColour(),
-        thicknessVal);
-      lineStartPoint = null;
+      // Start new preview from this point
+      linePreviewCurrent = new fabric.Line(
+        [newPoint.x, newPoint.y, newPoint.x, newPoint.y],
+        { stroke: '#999', strokeWidth: 1, strokeDashArray: [4, 4], selectable: false, evented: false, _isPreview: true }
+      );
+      canvas.add(linePreviewCurrent);
+      canvas.renderAll();
 
-      saveHistoryState();
-      autoSave();
+      // If only 2 points and this was a normal second click (not double), finish immediately
+      // This preserves the simple 2-click behavior for straight lines
+      // Only continue multi-point mode if user already has 2+ points and keeps clicking
     }
+  }
+
+  function finishLineDrawing() {
+    if (lineWaypoints.length < 2) {
+      cancelLineDrawing();
+      return;
+    }
+
+    // Remove all preview lines
+    linePreviewLines.forEach(l => canvas.remove(l));
+    if (linePreviewCurrent) canvas.remove(linePreviewCurrent);
+    linePreviewLines = [];
+    linePreviewCurrent = null;
+    document.getElementById('line-hint').style.display = 'none';
+
+    // Convert pixel waypoints to logical coordinates
+    const s = scaleFactor;
+    const p = CONFIG.RINK_PADDING;
+    const vc = getViewConfig();
+    const thicknessVal = document.getElementById('line-thickness') ? document.getElementById('line-thickness').value : 'medium';
+
+    const logPoints = lineWaypoints.map(wp => ({
+      x: (wp.x - p) / s + vc.logX,
+      y: (wp.y - p) / s + vc.logY
+    }));
+
+    createLine(activeTool, logPoints, getCurrentColour(), thicknessVal);
+    lineWaypoints = [];
+    lineLastClickTime = 0;
+    lineJustFinished = true; // prevent dblclick from deleting the new line
+
+    saveHistoryState();
+    autoSave();
   }
 
   function cancelLineDrawing() {
-    if (linePreviewLine) {
-      canvas.remove(linePreviewLine);
-      linePreviewLine = null;
-    }
-    lineStartPoint = null;
+    linePreviewLines.forEach(l => canvas.remove(l));
+    if (linePreviewCurrent) canvas.remove(linePreviewCurrent);
+    linePreviewLines = [];
+    linePreviewCurrent = null;
+    lineWaypoints = [];
+    lineLastClickTime = 0;
     document.getElementById('line-hint').style.display = 'none';
   }
 
-  // start/end are in LOGICAL coordinates (0-200 x 0-85)
-  function createLine(type, logStart, logEnd, colour, thickness) {
+  // points is an array of logical coordinates [{x,y}, ...] (0-200 x 0-85)
+  // For backward compat, also accepts (type, logStart, logEnd, colour, thickness) with 2 point objects
+  function createLine(type, pointsOrStart, colourOrEnd, thicknessOrColour, thicknessArg) {
+    let logPoints, colour, thickness;
+
+    // Detect old 2-point call signature: createLine(type, {x,y}, {x,y}, colour, thickness)
+    if (Array.isArray(pointsOrStart)) {
+      logPoints = pointsOrStart;
+      colour = colourOrEnd;
+      thickness = thicknessOrColour;
+    } else {
+      // Legacy: two point objects
+      logPoints = [pointsOrStart, colourOrEnd];
+      colour = thicknessOrColour;
+      thickness = thicknessArg;
+    }
+
     const s = scaleFactor;
     const thicknessMap = { thin: 0.5, medium: 1, thick: 2 };
     const thicknessVal = thickness || (document.getElementById('line-thickness') ? document.getElementById('line-thickness').value : 'medium');
     const sw = (thicknessMap[thicknessVal] || 1) * s;
     const p = CONFIG.RINK_PADDING;
     const vc = getViewConfig();
-    const start = { x: (logStart.x - vc.logX) * s + p, y: (logStart.y - vc.logY) * s + p };
-    const end = { x: (logEnd.x - vc.logX) * s + p, y: (logEnd.y - vc.logY) * s + p };
     const objects = [];
 
-    // Shorten line so it ends at the arrow base, not the tip
-    const dx = end.x - start.x;
-    const dy = end.y - start.y;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    const arrowLen = CONFIG.ARROW_SIZE * s;
-    const shortenEnd = len > arrowLen ? {
-      x: end.x - (dx / len) * arrowLen,
-      y: end.y - (dy / len) * arrowLen
-    } : end;
+    // Convert logical points to pixel
+    const pixPoints = logPoints.map(lp => ({
+      x: (lp.x - vc.logX) * s + p,
+      y: (lp.y - vc.logY) * s + p
+    }));
 
-    if (type === 'skate') {
-      objects.push(new fabric.Line(
-        [start.x, start.y, shortenEnd.x, shortenEnd.y],
-        { stroke: colour, strokeWidth: sw, selectable: false, evented: false }
-      ));
-    } else if (type === 'puck') {
-      const path = createSquigglyPath(start, shortenEnd, s);
-      objects.push(new fabric.Path(path, {
-        stroke: colour, strokeWidth: sw, fill: 'transparent',
-        selectable: false, evented: false
-      }));
-    } else if (type === 'pass') {
-      objects.push(new fabric.Line(
-        [start.x, start.y, shortenEnd.x, shortenEnd.y],
-        { stroke: colour, strokeWidth: sw, strokeDashArray: [3*s, 3*s], selectable: false, evented: false }
-      ));
-    } else if (type === 'shoot') {
-      objects.push(new fabric.Line(
-        [start.x, start.y, shortenEnd.x, shortenEnd.y],
-        { stroke: colour, strokeWidth: sw, strokeDashArray: [6*s, 3*s], selectable: false, evented: false }
-      ));
+    // Draw segments between consecutive points
+    for (let i = 0; i < pixPoints.length - 1; i++) {
+      const segStart = pixPoints[i];
+      const segEnd = pixPoints[i + 1];
+      const isLastSegment = (i === pixPoints.length - 2);
+
+      // Shorten last segment so it ends at the arrow base
+      let drawEnd = segEnd;
+      if (isLastSegment) {
+        const dx = segEnd.x - segStart.x;
+        const dy = segEnd.y - segStart.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const arrowLen = CONFIG.ARROW_SIZE * s;
+        if (len > arrowLen) {
+          drawEnd = {
+            x: segEnd.x - (dx / len) * arrowLen,
+            y: segEnd.y - (dy / len) * arrowLen
+          };
+        }
+      }
+
+      if (type === 'skate') {
+        objects.push(new fabric.Line(
+          [segStart.x, segStart.y, drawEnd.x, drawEnd.y],
+          { stroke: colour, strokeWidth: sw, selectable: false, evented: false }
+        ));
+      } else if (type === 'puck') {
+        const path = createSquigglyPath(segStart, drawEnd, s);
+        objects.push(new fabric.Path(path, {
+          stroke: colour, strokeWidth: sw, fill: 'transparent',
+          selectable: false, evented: false
+        }));
+      } else if (type === 'pass') {
+        objects.push(new fabric.Line(
+          [segStart.x, segStart.y, drawEnd.x, drawEnd.y],
+          { stroke: colour, strokeWidth: sw, strokeDashArray: [3*s, 3*s], selectable: false, evented: false }
+        ));
+      } else if (type === 'shoot') {
+        objects.push(new fabric.Line(
+          [segStart.x, segStart.y, drawEnd.x, drawEnd.y],
+          { stroke: colour, strokeWidth: sw, strokeDashArray: [6*s, 3*s], selectable: false, evented: false }
+        ));
+      }
+
+      // Arrow only on the last segment
+      if (isLastSegment) {
+        const arrow = createArrowhead(segStart, segEnd, colour, s);
+        objects.push(arrow);
+      }
     }
-
-    const arrow = createArrowhead(start, end, colour, s);
-    objects.push(arrow);
 
     const group = new fabric.Group(objects, {
       selectable: false, evented: true,
       _drillType: 'line', _lineType: type,
-      _logStartX: logStart.x, _logStartY: logStart.y,
-      _logEndX: logEnd.x, _logEndY: logEnd.y,
+      _logPoints: logPoints,
+      // Keep legacy fields for backward compat with move mode
+      _logStartX: logPoints[0].x, _logStartY: logPoints[0].y,
+      _logEndX: logPoints[logPoints.length - 1].x, _logEndY: logPoints[logPoints.length - 1].y,
       _colour: colour,
       _thickness: thicknessVal || 'medium'
     });
@@ -4122,8 +4267,6 @@ html[data-theme="dark"] {
 
     if (obj._drillType === 'line') {
       // For line groups: compute delta from old position to new position
-      // The group's logical center was at the midpoint of start/end
-      // After move, left/top reflect the new center (with originX/Y offsets)
       const newCenterX = obj.left;
       const newCenterY = obj.top;
 
@@ -4138,6 +4281,14 @@ html[data-theme="dark"] {
       obj._logStartY += deltaLogY;
       obj._logEndX += deltaLogX;
       obj._logEndY += deltaLogY;
+
+      // Also update multi-point waypoints if present
+      if (obj._logPoints && obj._logPoints.length > 0) {
+        obj._logPoints = obj._logPoints.map(pt => ({
+          x: pt.x + deltaLogX,
+          y: pt.y + deltaLogY
+        }));
+      }
     } else if (obj._objectType) {
       // For regular objects (players, pylons, nets, pucks)
       // These use originX/Y: 'center' so left/top is the center
@@ -4193,16 +4344,26 @@ html[data-theme="dark"] {
       if (obj._isRink || obj._isRinkBg || obj._isPreview) return;
 
       if (obj._drillType === 'line') {
-        items.push({
+        const lineItem = {
           kind: 'line',
           lineType: obj._lineType,
-          startX: obj._logStartX,
-          startY: obj._logStartY,
-          endX: obj._logEndX,
-          endY: obj._logEndY,
           colour: obj._colour,
           thickness: obj._thickness || 'medium'
-        });
+        };
+        if (obj._logPoints && obj._logPoints.length > 0) {
+          lineItem.points = obj._logPoints;
+          // Also store legacy fields for backward compat
+          lineItem.startX = obj._logPoints[0].x;
+          lineItem.startY = obj._logPoints[0].y;
+          lineItem.endX = obj._logPoints[obj._logPoints.length - 1].x;
+          lineItem.endY = obj._logPoints[obj._logPoints.length - 1].y;
+        } else {
+          lineItem.startX = obj._logStartX;
+          lineItem.startY = obj._logStartY;
+          lineItem.endX = obj._logEndX;
+          lineItem.endY = obj._logEndY;
+        }
+        items.push(lineItem);
       } else if (obj._objectType === 'freehand') {
         items.push({
           kind: 'object',
@@ -4240,11 +4401,12 @@ html[data-theme="dark"] {
 
     items.forEach(item => {
       if (item.kind === 'line') {
-        createLine(item.lineType,
+        // Support both new points array and legacy startX/endX format
+        const points = item.points || [
           { x: item.startX, y: item.startY },
-          { x: item.endX, y: item.endY },
-          item.colour,
-          item.thickness || 'medium');
+          { x: item.endX, y: item.endY }
+        ];
+        createLine(item.lineType, points, item.colour, item.thickness || 'medium');
       } else if (item.kind === 'object' && item.objectType === 'freehand') {
         renderFreehandPath(item);
       } else if (item.kind === 'object') {
@@ -4579,6 +4741,7 @@ html[data-theme="dark"] {
     });
     document.getElementById('file-json').addEventListener('change', importJSON);
     confirmAction('btn-export-pdf', exportPDF);
+    confirmAction('btn-export-png', exportPNG);
     document.getElementById('btn-share').addEventListener('click', shareDrill);
 
     // Fullscreen toggle
@@ -4592,9 +4755,26 @@ html[data-theme="dark"] {
     });
 
     document.getElementById('btn-upload-bg').addEventListener('click', () => {
-      document.getElementById('file-bg').click();
+      const bar = document.getElementById('bg-url-bar');
+      bar.style.display = bar.style.display === 'none' ? 'block' : 'none';
+      if (bar.style.display === 'block') {
+        document.getElementById('bg-url-input').focus();
+      }
     });
-    document.getElementById('file-bg').addEventListener('change', uploadBackground);
+    document.getElementById('bg-url-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const url = this.value.trim();
+        if (!url) return;
+        loadBackgroundFromURL(url);
+        this.value = '';
+        document.getElementById('bg-url-bar').style.display = 'none';
+      }
+      if (e.key === 'Escape') {
+        this.value = '';
+        document.getElementById('bg-url-bar').style.display = 'none';
+      }
+    });
 
     // Auto-save on title/description change
     document.getElementById('drill-title').addEventListener('input', () => {
@@ -4825,45 +5005,51 @@ html[data-theme="dark"] {
     doc.save(title.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf');
   }
 
-  function uploadBackground(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+  function exportPNG() {
+    const dataUrl = canvas.toDataURL({ format: 'png', multiplier: 2 });
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = (document.getElementById('drill-title').value || 'drill') + '.png';
+    a.click();
+  }
 
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      const url = ev.target.result;
-      CONFIG.BACKGROUND_URL = url;
+  function loadBackgroundFromURL(url) {
+    CONFIG.BACKGROUND_URL = url;
 
-      // Remove existing rink elements
-      canvas.getObjects().slice().forEach(obj => {
-        if (obj._isRink || obj._isRinkBg) canvas.remove(obj);
-      });
+    // Remove existing rink elements
+    canvas.getObjects().slice().forEach(obj => {
+      if (obj._isRink || obj._isRinkBg) canvas.remove(obj);
+    });
 
-      // Add new background
-      fabric.Image.fromURL(url, function(img) {
-        img.set({
-          left: 0, top: 0,
-          scaleX: canvas.width / img.width,
-          scaleY: canvas.height / img.height,
-          selectable: false, evented: false,
-          _isRinkBg: true
-        });
-        canvas.add(img);
-        canvas.sendToBack(img);
+    // Add new background
+    fabric.Image.fromURL(url, function(img) {
+      if (!img || !img.width) {
+        alert('Failed to load image from URL. Check the URL and try again.');
+        CONFIG.BACKGROUND_URL = null;
+        drawDefaultRink();
         canvas.renderAll();
-        saveHistoryState();
-        autoSave();
+        return;
+      }
+      img.set({
+        left: 0, top: 0,
+        scaleX: canvas.width / img.width,
+        scaleY: canvas.height / img.height,
+        selectable: false, evented: false,
+        _isRinkBg: true
       });
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+      canvas.add(img);
+      canvas.sendToBack(img);
+      canvas.renderAll();
+      saveHistoryState();
+      autoSave();
+    }, { crossOrigin: 'anonymous' });
   }
 
   // ==================== LAST UPDATED FOOTER ====================
   function updateLastUpdated() {
     const el = document.getElementById('last-updated');
     if (!el) return;
-    el.textContent = 'Mar 29, 2026';
+    el.textContent = 'Mar 29, 2026, 2:00 AM';
   }
 
   // ==================== PERSISTENCE (LIBRARY-AWARE) ====================
@@ -4895,6 +5081,15 @@ html[data-theme="dark"] {
         const modal = document.getElementById('shortcuts-modal');
         modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
         return;
+      }
+
+      // Enter — finish multi-segment line drawing
+      if (e.key === 'Enter' && !e.target.matches('input, textarea, select')) {
+        if (lineWaypoints.length >= 2) {
+          e.preventDefault();
+          finishLineDrawing();
+          return;
+        }
       }
 
       // ESC — deselect tool
@@ -4984,20 +5179,57 @@ html[data-theme="dark"] {
       var s = scaleFactor;
       var p = CONFIG.RINK_PADDING;
       var vc = getViewConfig();
-      var startPx = { x: (line.startX - vc.logX) * s + p, y: (line.startY - vc.logY) * s + p };
-      var endPx = { x: (line.endX - vc.logX) * s + p, y: (line.endY - vc.logY) * s + p };
 
-      // Animation varies by line type:
-      // skate: player (large dot) skates from start to end
-      // puck: player (large dot) + trailing puck (small dot) move together
-      // pass: player stays at start, puck (small dot) flies to end
-      // shoot: player stays at start, puck (small dot) flies faster to end
+      // Support multi-segment lines
+      var linePts = line.points || [
+        { x: line.startX, y: line.startY },
+        { x: line.endX, y: line.endY }
+      ];
+      var pixPts = linePts.map(function(pt) {
+        return { x: (pt.x - vc.logX) * s + p, y: (pt.y - vc.logY) * s + p };
+      });
+
+      // Compute cumulative segment lengths for multi-point interpolation
+      var segLengths = [];
+      var totalLen = 0;
+      for (var si = 0; si < pixPts.length - 1; si++) {
+        var sdx = pixPts[si+1].x - pixPts[si].x;
+        var sdy = pixPts[si+1].y - pixPts[si].y;
+        var slen = Math.sqrt(sdx*sdx + sdy*sdy);
+        segLengths.push(slen);
+        totalLen += slen;
+      }
+
+      // Interpolate position along multi-segment path at fraction t (0-1)
+      function interpPath(t) {
+        if (pixPts.length === 2 || totalLen === 0) {
+          return { x: pixPts[0].x + (pixPts[pixPts.length-1].x - pixPts[0].x) * t,
+                   y: pixPts[0].y + (pixPts[pixPts.length-1].y - pixPts[0].y) * t };
+        }
+        var dist = t * totalLen;
+        var accum = 0;
+        for (var i = 0; i < segLengths.length; i++) {
+          if (accum + segLengths[i] >= dist) {
+            var segT = (dist - accum) / segLengths[i];
+            return {
+              x: pixPts[i].x + (pixPts[i+1].x - pixPts[i].x) * segT,
+              y: pixPts[i].y + (pixPts[i+1].y - pixPts[i].y) * segT
+            };
+          }
+          accum += segLengths[i];
+        }
+        return pixPts[pixPts.length - 1];
+      }
+
+      var startPx = pixPts[0];
+      var endPx = pixPts[pixPts.length - 1];
 
       var isPlayerMoving = (line.lineType === 'skate' || line.lineType === 'puck');
       var hasPuck = (line.lineType === 'puck' || line.lineType === 'pass' || line.lineType === 'shoot');
       var speedFactor = parseFloat(document.getElementById('anim-speed').value) || 1;
       var baseDuration = (line.lineType === 'shoot') ? 500 : 800;
-      var duration = baseDuration * speedFactor;
+      // Scale duration by number of segments for multi-point lines
+      var duration = baseDuration * speedFactor * Math.max(1, (pixPts.length - 1) * 0.7);
 
       // Player dot (larger, hollow circle)
       var playerDot = new fabric.Circle({
@@ -5021,7 +5253,7 @@ html[data-theme="dark"] {
         canvas.add(puckDot);
       }
 
-      // Ghost trail
+      // Ghost trail — for multi-segment, we just show a simple fading line from start to current
       var ghostLine = new fabric.Line([startPx.x, startPx.y, startPx.x, startPx.y], {
         stroke: line.colour, strokeWidth: 1.5 * s, opacity: 0.15,
         selectable: false, evented: false
@@ -5040,28 +5272,21 @@ html[data-theme="dark"] {
         var t = Math.min(elapsed / duration, 1);
         var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
-        var curX = startPx.x + (endPx.x - startPx.x) * eased;
-        var curY = startPx.y + (endPx.y - startPx.y) * eased;
+        var curPos = interpPath(eased);
 
         if (isPlayerMoving) {
-          // Player moves along the line
-          playerDot.set({ left: curX, top: curY });
-          ghostLine.set({ x2: curX, y2: curY });
+          playerDot.set({ left: curPos.x, top: curPos.y });
+          ghostLine.set({ x2: curPos.x, y2: curPos.y });
           if (puckDot) {
-            // Puck trails slightly behind the player
-            var trailT = Math.max(0, eased - 0.05);
-            puckDot.set({
-              left: startPx.x + (endPx.x - startPx.x) * trailT,
-              top: startPx.y + (endPx.y - startPx.y) * trailT
-            });
+            var trailPos = interpPath(Math.max(0, eased - 0.05));
+            puckDot.set({ left: trailPos.x, top: trailPos.y });
           }
         } else {
-          // Player stays at start, puck flies to end
           playerDot.set({ left: startPx.x, top: startPx.y });
           if (puckDot) {
-            puckDot.set({ left: curX, top: curY });
+            puckDot.set({ left: curPos.x, top: curPos.y });
           }
-          ghostLine.set({ x2: curX, y2: curY });
+          ghostLine.set({ x2: curPos.x, y2: curPos.y });
         }
 
         canvas.renderAll();
@@ -5072,11 +5297,12 @@ html[data-theme="dark"] {
           canvas.remove(playerDot);
           if (puckDot) canvas.remove(puckDot);
           canvas.remove(ghostLine);
-          createLine(line.lineType,
+          // Draw completed line using points array
+          var drawPts = line.points || [
             { x: line.startX, y: line.startY },
-            { x: line.endX, y: line.endY },
-            line.colour,
-            line.thickness || 'medium');
+            { x: line.endX, y: line.endY }
+          ];
+          createLine(line.lineType, drawPts, line.colour, line.thickness || 'medium');
           lineIndex++;
           animationTimer = setTimeout(animateNextLine, 200);
         }
@@ -5124,11 +5350,11 @@ html[data-theme="dark"] {
     var lines = stepItems._lines;
     if (stepIndex < lines.length) {
       var line = lines[stepIndex];
-      createLine(line.lineType,
+      var drawPts = line.points || [
         { x: line.startX, y: line.startY },
-        { x: line.endX, y: line.endY },
-        line.colour,
-        line.thickness || 'medium');
+        { x: line.endX, y: line.endY }
+      ];
+      createLine(line.lineType, drawPts, line.colour, line.thickness || 'medium');
       stepIndex++;
     }
 
