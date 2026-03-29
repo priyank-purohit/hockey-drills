@@ -45,6 +45,17 @@ Hosted on GitHub Pages: https://priyank-purohit.github.io/hockey-drills/
 - Background image loaded via URL (not file upload) — uses crossOrigin: 'anonymous'
 - Service worker caches HTML (network-first) and CDN assets (cache-first)
 
+## Updating the Default Drill
+The default drill shown to new users is defined in two places that must stay in sync:
+1. **Source of truth:** `config/default-drill.json` — edit this file (or export a drill from the app and replace the file contents)
+2. **Embedded copy:** `DEFAULT_DRILL_ITEMS` constant in `index.html` — must match the JSON file's `items` array
+
+**To sync after editing the JSON file:**
+1. Read `config/default-drill.json`
+2. Find `const DEFAULT_DRILL_ITEMS = [` in `index.html`
+3. Replace the array contents with the items from the JSON file (round coordinates to 2 decimal places for compactness)
+4. Commit both files
+
 # Testing
 - Playwright tests in `tests/` folder (gitignored, not deployed)
 - `tests/test-editor.mjs` — 11 editor tests

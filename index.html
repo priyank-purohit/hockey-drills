@@ -1294,27 +1294,27 @@ html[data-theme="dark"] {
   };
 
   // Default sample drill items (embedded from config/default-drill.json)
+  // To update: edit config/default-drill.json, then run: claude "sync default drill"
   const DEFAULT_DRILL_ITEMS = [
-    {kind:"object",objectType:"forward",x:19.1,y:11.95,colour:"#d32f2f",index:1},
-    {kind:"object",objectType:"forward",x:14,y:15.67,colour:"#d32f2f",index:2},
-    {kind:"object",objectType:"forward",x:19.49,y:71.89,colour:"#d32f2f",index:3},
-    {kind:"object",objectType:"forward",x:16.75,y:76.2,colour:"#d32f2f",index:4},
-    {kind:"object",objectType:"defense",x:14.79,y:26.05,colour:"#d32f2f",index:1},
-    {kind:"object",objectType:"defense",x:7.54,y:27.03,colour:"#d32f2f",index:2},
-    {kind:"object",objectType:"defense",x:17.14,y:64.05,colour:"#d32f2f",index:3},
-    {kind:"object",objectType:"defense",x:7.54,y:63.08,colour:"#d32f2f",index:4},
-    {kind:"object",objectType:"puck5",x:7.15,y:18.41,colour:"#212121"},
-    {kind:"object",objectType:"puck5",x:9.5,y:16.85,colour:"#212121"},
-    {kind:"object",objectType:"puck5",x:7.93,y:70.13,colour:"#212121"},
-    {kind:"object",objectType:"puck5",x:12.24,y:70.32,colour:"#212121"},
-    {kind:"object",objectType:"goalie",x:14.99,y:42.31,colour:"#d32f2f",index:1},
-    {kind:"object",objectType:"goalie",x:4.41,y:42.31,colour:"#d32f2f",index:2},
-    {kind:"line",lineType:"skate",colour:"#212121",thickness:"medium",points:[{x:24.58,y:10.97},{x:85.5,y:10.58},{x:92.16,y:21.16},{x:84.92,y:30.17},{x:61.21,y:32.91}]},
-    {kind:"line",lineType:"pass",colour:"#212121",thickness:"medium",points:[{x:19.29,y:26.05},{x:54.55,y:33.5}]},
-    {kind:"line",lineType:"shoot",colour:"#212121",thickness:"medium",points:[{x:45.74,y:36.63},{x:25.37,y:40.55}]},
-    {kind:"line",lineType:"skate",colour:"#212121",thickness:"medium",points:[{x:23.21,y:76.4},{x:80.61,y:76.98},{x:92.56,y:66.6},{x:84.13,y:53.09},{x:63.37,y:50.15},{x:61.21,y:49.95}]},
-    {kind:"line",lineType:"pass",colour:"#212121",thickness:"medium",points:[{x:21.65,y:61.51},{x:53.18,y:54.85},{x:57.88,y:52.5}]},
-    {kind:"line",lineType:"shoot",colour:"#212121",thickness:"medium",points:[{x:54.36,y:48.78},{x:27.72,y:45.64}]}
+    {kind:"object",objectType:"puck5",x:9.96,y:14.1,colour:"#212121"},
+    {kind:"object",objectType:"puck5",x:8.2,y:67.38,colour:"#212121"},
+    {kind:"object",objectType:"forward",x:28.77,y:4.9,colour:"#d32f2f",index:1},
+    {kind:"object",objectType:"forward",x:20.93,y:6.07,colour:"#d32f2f",index:2},
+    {kind:"object",objectType:"forward",x:14.07,y:8.42,colour:"#d32f2f",index:3},
+    {kind:"object",objectType:"forward",x:34.84,y:80.51,colour:"#d32f2f",index:4},
+    {kind:"object",objectType:"forward",x:25.44,y:79.73,colour:"#d32f2f",index:5},
+    {kind:"object",objectType:"forward",x:17.6,y:76.98,colour:"#d32f2f",index:6},
+    {kind:"object",objectType:"defense",x:18.78,y:20.18,colour:"#d32f2f",index:1},
+    {kind:"object",objectType:"defense",x:11.14,y:21.35,colour:"#d32f2f",index:2},
+    {kind:"object",objectType:"defense",x:15.45,y:61.7,colour:"#d32f2f",index:3},
+    {kind:"object",objectType:"defense",x:8,y:57,colour:"#d32f2f",index:4},
+    {kind:"object",objectType:"goalie",x:16.23,y:42.31,colour:"#d32f2f",index:1},
+    {kind:"line",lineType:"skate",colour:"#212121",thickness:"medium",points:[{x:33.47,y:5.09},{x:82.83,y:7.44},{x:88.51,y:10.38},{x:89.1,y:15.08},{x:87.53,y:21.35},{x:82.63,y:22.92},{x:68.73,y:25.66}]},
+    {kind:"line",lineType:"pass",colour:"#212121",thickness:"medium",points:[{x:21.91,y:20.76},{x:64.03,y:24.68}]},
+    {kind:"line",lineType:"shoot",colour:"#212121",thickness:"medium",points:[{x:62.26,y:27.82},{x:24.26,y:39.37}]},
+    {kind:"line",lineType:"skate",colour:"#212121",thickness:"medium",points:[{x:38.36,y:80.9},{x:85.77,y:77.96},{x:89.1,y:72.09},{x:88.12,y:65.43},{x:84.2,y:60.92},{x:81.07,y:59.94},{x:71.67,y:59.55}]},
+    {kind:"line",lineType:"pass",colour:"#212121",thickness:"medium",points:[{x:18.58,y:61.7},{x:64.42,y:60.33}]},
+    {kind:"line",lineType:"shoot",colour:"#212121",thickness:"medium",points:[{x:65.2,y:56.42},{x:25.24,y:44.07}]}
   ];
 
   // View configurations: logical viewport rectangles within the 200x85 rink space
@@ -5111,7 +5111,7 @@ html[data-theme="dark"] {
   function updateLastUpdated() {
     const el = document.getElementById('last-updated');
     if (!el) return;
-    el.textContent = 'Mar 29, 2026, 03:25 PM'; // AUTO_TIMESTAMP
+    el.textContent = 'Mar 29, 2026, 06:26 PM'; // AUTO_TIMESTAMP
   }
 
   // ==================== PERSISTENCE (LIBRARY-AWARE) ====================
